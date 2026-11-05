@@ -1,0 +1,5 @@
+-keep class app.capnative.localnotifications.LocalNotificationsPlugin { *; }
+-keep class app.capnative.localnotifications.AlarmReceiver { *; }
+-keep class app.capnative.localnotifications.ActionReceiver { *; }
+-keep class app.capnative.localnotifications.BootReceiver { *; }
+-keep class app.capnative.localnotifications.ExactAlarmPermissionReceiver { *; }
