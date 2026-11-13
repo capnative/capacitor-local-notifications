@@ -16,21 +16,6 @@ export interface LocalNotificationsPlugin {
   requestPermissions(): Promise<PermissionStatus>;
 
   /**
-   * Whether the app may schedule exact alarms.
-   * Android 12+ reads `AlarmManager.canScheduleExactAlarms()`.
-   * Older Android versions and iOS resolve `granted` because they have
-   * no separate exact-alarm switch.
-   */
-  checkExactNotificationSetting(): Promise<ExactAlarmStatus>;
-
-  /**
-   * Open the system screen where the user allows exact alarms.
-   * On Android 12+ this leaves the app. Other platforms resolve `granted`
-   * and do not navigate.
-   */
-  changeExactNotificationSetting(): Promise<ExactAlarmStatus>;
-
-  /**
    * Add one or more notifications. The call is atomic: if any item is
    * invalid, nothing is scheduled. Scheduling an id that is already pending
    * replaces that notification.
@@ -110,15 +95,6 @@ export interface LocalNotificationsPlugin {
 export interface PermissionStatus {
   /** `prompt` when the user has not been asked, otherwise `granted` or `denied`. */
   display: PermissionState;
-}
-
-export interface ExactAlarmStatus {
-  /**
-   * `granted` when exact alarms may be used or the platform has no separate switch.
-   * `denied` when Android 12+ is blocking exact alarms. Scheduling still succeeds
-   * and falls back to an inexact alarm.
-   */
-  exact_alarm: PermissionState;
 }
 
 export interface ScheduleOptions {

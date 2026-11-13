@@ -65,8 +65,6 @@ await LocalNotifications.addListener('localNotificationActionPerformed', (action
 
 * [`checkPermissions()`](#checkpermissions)
 * [`requestPermissions()`](#requestpermissions)
-* [`checkExactNotificationSetting()`](#checkexactnotificationsetting)
-* [`changeExactNotificationSetting()`](#changeexactnotificationsetting)
 * [`schedule(...)`](#schedule)
 * [`getPending()`](#getpending)
 * [`cancel(...)`](#cancel)
@@ -115,37 +113,6 @@ On Android 12 and older this does not show a dialog; it returns the
 current app notification setting.
 
 **Returns:** <code>Promise&lt;<a href="#permissionstatus">PermissionStatus</a>&gt;</code>
-
---------------------
-
-
-### checkExactNotificationSetting()
-
-```typescript
-checkExactNotificationSetting() => Promise<ExactAlarmStatus>
-```
-
-Whether the app may schedule exact alarms.
-Android 12+ reads `AlarmManager.canScheduleExactAlarms()`.
-Older Android versions and iOS resolve `granted` because they have
-no separate exact-alarm switch.
-
-**Returns:** <code>Promise&lt;<a href="#exactalarmstatus">ExactAlarmStatus</a>&gt;</code>
-
---------------------
-
-
-### changeExactNotificationSetting()
-
-```typescript
-changeExactNotificationSetting() => Promise<ExactAlarmStatus>
-```
-
-Open the system screen where the user allows exact alarms.
-On Android 12+ this leaves the app. Other platforms resolve `granted`
-and do not navigate.
-
-**Returns:** <code>Promise&lt;<a href="#exactalarmstatus">ExactAlarmStatus</a>&gt;</code>
 
 --------------------
 
@@ -364,13 +331,6 @@ Remove all listeners registered by this plugin.
 | Prop          | Type                                                        | Description                                                                 |
 | ------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------- |
 | **`display`** | <code><a href="#permissionstate">PermissionState</a></code> | `prompt` when the user has not been asked, otherwise `granted` or `denied`. |
-
-
-#### ExactAlarmStatus
-
-| Prop              | Type                                                        | Description                                                                                                                                                                                       |
-| ----------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`exact_alarm`** | <code><a href="#permissionstate">PermissionState</a></code> | `granted` when exact alarms may be used or the platform has no separate switch. `denied` when Android 12+ is blocking exact alarms. Scheduling still succeeds and falls back to an inexact alarm. |
 
 
 #### ScheduleResult
@@ -696,7 +656,7 @@ Pending notifications are capped at 100. One `schedule()` call accepts at most 5
 
 ### Exact alarms
 
-Android 12 and newer can block exact alarms. `checkExactNotificationSetting()` reports that. `schedule()` does not fail when exact alarms are denied; it uses an inexact alarm. Turning the setting on later re-arms stored alarms. Inexact alarms can be minutes late, and Doze can defer them further. `allowWhileIdle` uses `setExactAndAllowWhileIdle` or `setAndAllowWhileIdle`, which is still subject to the system's idle quota.
+Android 12 and newer can block exact alarms. `schedule()` does not fail when exact alarms are denied; it uses an inexact alarm. Turning the setting on later re-arms stored alarms. Inexact alarms can be minutes late, and Doze can defer them further. `allowWhileIdle` uses `setExactAndAllowWhileIdle` or `setAndAllowWhileIdle`, which is still subject to the system's idle quota.
 
 ### Foreground
 
@@ -720,7 +680,7 @@ Android freezes a channel's importance and sound after creation. Deleting a chan
 
 ## Migration from `@capacitor/local-notifications`
 
-The method names, `exact_alarm`, and most fields match that plugin so existing calls are recognizable. These behaviors differ on purpose:
+The method names and most fields match that plugin so existing calls are recognizable. These behaviors differ on purpose:
 
 - `schedule.on.month` is 1–12 on Android as well as iOS. The other plugin passes the number straight to Android's 0-based `Calendar.MONTH`.
 - `count` multiplies the `every` interval. That matches the other plugin's implementation. Its docs have also described `count` as a maximum number of deliveries; this plugin does not do that.
@@ -732,6 +692,7 @@ The method names, `exact_alarm`, and most fields match that plugin so existing c
 - Android action buttons open the app, including when `foreground` is false.
 - Per-notification `sound` is ignored on Android 8+. Configure the channel.
 - `areEnabled()` is not included. Use `checkPermissions()` and treat `display === 'granted'` as enabled.
+- `checkExactNotificationSetting()` and `changeExactNotificationSetting()` are not included. When Android denies exact alarms, `schedule()` uses an inexact alarm.
 - Deprecated type aliases from the other package are not re-exported.
 - `extra` is size-limited and should not contain secrets.
 

@@ -1,15 +1,11 @@
 package app.capnative.localnotifications
 
 import android.Manifest
-import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
-import android.provider.Settings
-import androidx.activity.result.ActivityResult
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
 import com.getcapacitor.JSArray
@@ -18,7 +14,6 @@ import com.getcapacitor.PermissionState
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
-import com.getcapacitor.annotation.ActivityCallback
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
 import com.getcapacitor.annotation.PermissionCallback
@@ -66,30 +61,6 @@ class LocalNotificationsPlugin : Plugin() {
     @PermissionCallback
     fun displayPermissionCallback(call: PluginCall) {
         checkPermissions(call)
-    }
-
-    @PluginMethod
-    fun checkExactNotificationSetting(call: PluginCall) {
-        call.resolve(exactResult())
-    }
-
-    @PluginMethod
-    fun changeExactNotificationSetting(call: PluginCall) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            call.resolve(exactResult())
-            return
-        }
-        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
-        try {
-            startActivityForResult(call, intent, "exactAlarmCallback")
-        } catch (_: Exception) {
-            call.reject("Exact alarm settings are not available on this device.", "UNAVAILABLE")
-        }
-    }
-
-    @ActivityCallback
-    fun exactAlarmCallback(call: PluginCall, result: ActivityResult) {
-        call.resolve(exactResult())
     }
 
     @PluginMethod
@@ -323,14 +294,6 @@ class LocalNotificationsPlugin : Plugin() {
             PermissionState.DENIED -> "denied"
             else -> if (enabled) "prompt" else "denied"
         }
-    }
-
-    private fun exactResult(): JSObject {
-        val result = JSObject()
-        val alarmManager = context.getSystemService(AlarmManager::class.java)
-        val granted = alarmManager == null || AlarmScheduler(context).canScheduleExact()
-        result.put("exact_alarm", if (granted) "granted" else "denied")
-        return result
     }
 
     private fun consumeActivityIntent(intent: Intent?) {

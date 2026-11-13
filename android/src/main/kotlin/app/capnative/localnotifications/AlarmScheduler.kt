@@ -44,11 +44,6 @@ internal class AlarmScheduler(private val context: Context) {
         pending.cancel()
     }
 
-    fun canScheduleExact(): Boolean {
-        val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return false
-        return canScheduleExact(alarmManager)
-    }
-
     private fun canScheduleExact(alarmManager: AlarmManager): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) alarmManager.canScheduleExactAlarms() else true
     }

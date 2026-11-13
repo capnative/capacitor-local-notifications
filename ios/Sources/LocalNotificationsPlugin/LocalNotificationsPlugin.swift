@@ -19,8 +19,6 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "listChannels", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "checkPermissions", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestPermissions", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "checkExactNotificationSetting", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "changeExactNotificationSetting", returnType: CAPPluginReturnPromise),
     ]
 
     private let handler = LocalNotificationsHandler()
@@ -64,14 +62,6 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             call.resolve(["display": granted ? "granted" : "denied"])
         }
-    }
-
-    @objc func checkExactNotificationSetting(_ call: CAPPluginCall) {
-        call.resolve(["exact_alarm": "granted"])
-    }
-
-    @objc func changeExactNotificationSetting(_ call: CAPPluginCall) {
-        call.resolve(["exact_alarm": "granted"])
     }
 
     @objc func schedule(_ call: CAPPluginCall) {
