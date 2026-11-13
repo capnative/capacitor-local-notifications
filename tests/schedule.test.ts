@@ -32,9 +32,6 @@ describe('parseNotifications', () => {
       id: 7,
       title: 'Hello',
       body: '',
-      autoCancel: true,
-      groupSummary: false,
-      allowWhileIdle: false,
       plan: { kind: 'immediate' },
     });
     expect(notification?.schedule).toBeUndefined();
@@ -70,7 +67,7 @@ describe('parseNotifications', () => {
       id: 1,
       title: 'Repeat',
       body: 'Body',
-      schedule: { at: new Date(at), repeats: true, allowWhileIdle: true },
+      schedule: { at: new Date(at), repeats: true },
     });
     expect(notification?.plan).toEqual({
       kind: 'fixed-interval',
@@ -78,7 +75,6 @@ describe('parseNotifications', () => {
       intervalMs: 120_000,
       nextMs: at,
     });
-    expect(notification?.allowWhileIdle).toBe(true);
     const next = nextPlanAfter(notification!.plan, at);
     expect(next).toMatchObject({ nextMs: at + 120_000 });
   });
@@ -111,12 +107,9 @@ describe('parseNotifications', () => {
     expect(codeOf(() => one({ id: 1.5, title: 'A', body: 'B' }))).toBe('INVALID_NOTIFICATION');
     expect(codeOf(() => one({ id: 1, title: '   ', body: 'B' }))).toBe('INVALID_NOTIFICATION');
     expect(codeOf(() => one({ id: 1, title: 'A', body: 'B', sound: '../beep.wav' }))).toBe('INVALID_NOTIFICATION');
-    expect(codeOf(() => one({ id: 1, title: 'A', body: 'B', smallIcon: 'Icon' }))).toBe('INVALID_NOTIFICATION');
     expect(codeOf(() => one({ id: 1, title: 'A', body: 'B', extra: JSON.parse('{"__proto__":{"admin":true}}') }))).toBe(
       'INVALID_NOTIFICATION',
     );
-    expect(codeOf(() => one({ id: 1, title: 'A', body: 'B', inboxList: ['', 'ok'] }))).toBe('INVALID_NOTIFICATION');
-    expect(codeOf(() => one({ id: 1, title: 'A', body: 'B', groupSummary: true }))).toBe('INVALID_NOTIFICATION');
     expect(
       codeOf(() =>
         parseNotifications(

@@ -9,9 +9,6 @@ final class LocalNotificationsHandler: NSObject, NotificationHandlerProtocol {
             return [.banner, .list, .sound, .badge]
         }
         plugin?.notifyListeners("localNotificationReceived", data: payload(notification.request), retainUntilConsumed: true)
-        if (notification.request.content.userInfo["silent"] as? Bool) == true {
-            return []
-        }
         return plugin?.presentationOptions() ?? [.banner, .list, .sound, .badge]
     }
 

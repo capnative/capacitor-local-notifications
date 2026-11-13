@@ -113,10 +113,6 @@ export interface DeliveredNotificationSchema {
   id: number;
   title: string;
   body: string;
-  /** Android notification tag when one was set. This plugin does not set tags. */
-  tag?: string;
-  group?: string;
-  groupSummary?: boolean;
   extra?: Record<string, unknown>;
   schedule?: Schedule;
 }
@@ -126,10 +122,7 @@ export interface ActionPerformed {
   notification: LocalNotificationSchema;
 }
 
-/**
- * A local notification.
- * Platform-specific fields are ignored where the platform cannot apply them.
- */
+/** A local notification. */
 export interface LocalNotificationSchema {
   /**
    * 32-bit integer id, shared by scheduling, cancel, and the notification shade.
@@ -140,10 +133,6 @@ export interface LocalNotificationSchema {
   title: string;
   /** Shown under the title. Required string, may be empty, at most 2000 characters. */
   body: string;
-  /** Android big-text style. Ignored when `inboxList` is set. */
-  largeBody?: string;
-  /** Android summary line for big-text and inbox styles. */
-  summaryText?: string;
   schedule?: Schedule;
   /**
    * iOS: a bundle file name, `default` for the system sound, or `''` for silence.
@@ -151,12 +140,6 @@ export interface LocalNotificationSchema {
    * Android 8+: ignored. The plugin config `sound` is used, or the system default.
    */
   sound?: string;
-  /** Android drawable resource name. Overrides the config `smallIcon`. */
-  smallIcon?: string;
-  /** Android large icon. Bitmap drawable resource name (`png` or `webp`, not a vector). */
-  largeIcon?: string;
-  /** Android icon tint. `#RGB`, `#RRGGBB`, or `#AARRGGBB`. */
-  iconColor?: string;
   /**
    * JSON object stored with the notification and returned to JavaScript.
    * Do not put secrets here. It is readable from the delivered notification
@@ -164,33 +147,6 @@ export interface LocalNotificationSchema {
    * At most 4096 characters once encoded.
    */
   extra?: Record<string, unknown>;
-  /** iOS `threadIdentifier`. */
-  threadIdentifier?: string;
-  /** iOS summary argument. Ignored on iOS 15 and newer. */
-  summaryArgument?: string;
-  /** iOS relevance score from 0 to 1. */
-  relevanceScore?: number;
-  /** iOS interruption level. `critical` and `timeSensitive` need Apple entitlements. */
-  interruptionLevel?: InterruptionLevel;
-  /** Android notification group key. */
-  group?: string;
-  /** Android group summary. Requires `group`. */
-  groupSummary?: boolean;
-  /** Android: the notification cannot be swiped away. Forces `autoCancel` off. */
-  ongoing?: boolean;
-  /** Android: remove the notification when the user taps it. Defaults to true. */
-  autoCancel?: boolean;
-  /** Android inbox lines. At most five. */
-  inboxList?: string[];
-  /**
-   * iOS: when true, a notification delivered in the foreground is not presented.
-   * The `localNotificationReceived` event still fires. Other platforms ignore this.
-   */
-  silent?: boolean;
-  /**
-   * iOS application icon badge. Android launcher badges are not set.
-   */
-  badge?: number;
 }
 
 export interface Schedule {
@@ -205,12 +161,6 @@ export interface Schedule {
    * That delay must be at least 60 seconds. Not valid with `on` or `every`.
    */
   repeats?: boolean;
-  /**
-   * Android: allow the alarm to fire in Doze maintenance windows.
-   * Exact Doze alarms are still limited by the system (roughly one every 9 minutes
-   * per app). Other platforms ignore this flag.
-   */
-  allowWhileIdle?: boolean;
   /**
    * Fire on the next local time that matches these fields, then repeat.
    * Month is 1–12. Weekday is 1 (Sunday) through 7 (Saturday).
@@ -263,11 +213,3 @@ export enum Weekday {
   Friday = 6,
   Saturday = 7,
 }
-
-/**
- * iOS interruption level.
- * `critical` requires the Critical Alerts entitlement.
- * `timeSensitive` requires the Time Sensitive Notifications capability and can
- * still be blocked by a Focus mode.
- */
-export type InterruptionLevel = 'active' | 'critical' | 'passive' | 'timeSensitive';

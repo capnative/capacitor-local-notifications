@@ -58,7 +58,6 @@ public enum FirePlan: Equatable {
 public struct ScheduleEcho: Equatable {
     public var at: String?
     public var repeats: Bool = false
-    public var allowWhileIdle: Bool = false
     public var every: String?
     public var count: Int?
     public var on: CalendarMatch?
@@ -70,13 +69,6 @@ public struct ValidatedNotification: Equatable {
     public var body: String
     public var sound: String?
     public var extraJSON: String?
-    public var threadIdentifier: String?
-    public var summaryArgument: String?
-    public var relevanceScore: Double?
-    public var interruptionLevel: String?
-    public var badge: Int?
-    public var silent: Bool
-    public var allowWhileIdle: Bool
     public var schedule: ScheduleEcho?
     public var plan: FirePlan
 
@@ -120,13 +112,6 @@ public enum SchedulePlan {
             body: body,
             sound: try parseSound(value["sound"]),
             extraJSON: try parseExtra(value["extra"]),
-            threadIdentifier: try optionalToken(value["threadIdentifier"], "^[A-Za-z0-9_.-]{1,128}$", "threadIdentifier", "INVALID_NOTIFICATION"),
-            summaryArgument: try optionalText(value["summaryArgument"], 200, "summaryArgument", "INVALID_NOTIFICATION"),
-            relevanceScore: try optionalScore(value["relevanceScore"]),
-            interruptionLevel: try optionalLevel(value["interruptionLevel"]),
-            badge: value["badge"] == nil ? nil : try requireInt(value["badge"], 0, 999_999, "badge", "INVALID_NOTIFICATION"),
-            silent: try optionalBool(value["silent"], false, "silent", "INVALID_NOTIFICATION"),
-            allowWhileIdle: scheduled.allowWhileIdle,
             schedule: scheduled.echo,
             plan: scheduled.plan
         )
@@ -203,15 +188,13 @@ public enum SchedulePlan {
     private struct ParsedSchedule {
         var echo: ScheduleEcho?
         var plan: FirePlan
-        var allowWhileIdle: Bool
     }
 
     private static func parseSchedule(_ value: Any?, now: Date, calendar: Calendar) throws -> ParsedSchedule {
-        if value == nil { return ParsedSchedule(echo: nil, plan: .immediate, allowWhileIdle: false) }
+        if value == nil { return ParsedSchedule(echo: nil, plan: .immediate) }
         guard let map = value as? [String: Any] else {
             throw NotificationFailure(code: "INVALID_SCHEDULE", message: "schedule must be an object.")
         }
-        let allowWhileIdle = try optionalBool(map["allowWhileIdle"], false, "allowWhileIdle", "INVALID_SCHEDULE")
         let hasAt = map["at"] != nil
         let hasOn = map["on"] != nil
         let hasEvery = map["every"] != nil
@@ -238,18 +221,16 @@ public enum SchedulePlan {
                 throw NotificationFailure(code: "INVALID_SCHEDULE", message: "The first fire time must be within 8 years.")
             }
             return ParsedSchedule(
-                echo: ScheduleEcho(every: wire, count: count, allowWhileIdle: allowWhileIdle),
-                plan: .interval(unit: unit, count: count, anchor: now, next: next),
-                allowWhileIdle: allowWhileIdle
+                echo: ScheduleEcho(every: wire, count: count),
+                plan: .interval(unit: unit, count: count, anchor: now, next: next)
             )
         }
         if hasOn {
             let on = try parseCalendar(map["on"])
             let next = try nextCalendar(on, after: now, calendar: calendar)
             return ParsedSchedule(
-                echo: ScheduleEcho(allowWhileIdle: allowWhileIdle, on: on),
-                plan: .calendar(on: on, next: next),
-                allowWhileIdle: allowWhileIdle
+                echo: ScheduleEcho(on: on),
+                plan: .calendar(on: on, next: next)
             )
         }
         if hasAt {
@@ -267,22 +248,16 @@ public enum SchedulePlan {
             }
             if repeats {
                 return ParsedSchedule(
-                    echo: ScheduleEcho(at: iso(at), repeats: true, allowWhileIdle: allowWhileIdle),
-                    plan: .fixedInterval(anchor: at, interval: interval, next: at),
-                    allowWhileIdle: allowWhileIdle
+                    echo: ScheduleEcho(at: iso(at), repeats: true),
+                    plan: .fixedInterval(anchor: at, interval: interval, next: at)
                 )
             }
             return ParsedSchedule(
-                echo: ScheduleEcho(at: iso(at), allowWhileIdle: allowWhileIdle),
-                plan: .once(at: at),
-                allowWhileIdle: allowWhileIdle
+                echo: ScheduleEcho(at: iso(at)),
+                plan: .once(at: at)
             )
         }
-        return ParsedSchedule(
-            echo: allowWhileIdle ? ScheduleEcho(allowWhileIdle: true) : nil,
-            plan: .immediate,
-            allowWhileIdle: allowWhileIdle
-        )
+        return ParsedSchedule(echo: nil, plan: .immediate)
     }
 
     private static func parseCalendar(_ value: Any?) throws -> CalendarMatch {
@@ -534,28 +509,6 @@ public enum SchedulePlan {
         return text
     }
 
-    private static func optionalScore(_ value: Any?) throws -> Double? {
-        if value == nil { return nil }
-        let number = (value as? NSNumber)?.doubleValue
-        guard let number, number.isFinite, number >= 0, number <= 1 else {
-            throw NotificationFailure(code: "INVALID_NOTIFICATION", message: "relevanceScore must be a number from 0 to 1.")
-        }
-        return number
-    }
-
-    private static func optionalLevel(_ value: Any?) throws -> String? {
-        if value == nil { return nil }
-        guard let text = value as? String, ["active", "critical", "passive", "timeSensitive"].contains(text) else {
-            throw NotificationFailure(code: "INVALID_NOTIFICATION", message: "interruptionLevel is not a supported value.")
-        }
-        return text
-    }
-
-    private static func optionalText(_ value: Any?, _ max: Int, _ name: String, _ code: String) throws -> String? {
-        if value == nil { return nil }
-        return try requireText(value, 1, max, name, code)
-    }
-
     private static func requireText(_ value: Any?, _ min: Int, _ max: Int, _ name: String, _ code: String) throws -> String {
         guard let raw = value as? String else {
             throw NotificationFailure(code: code, message: "\(name) must be a string.")
@@ -563,18 +516,6 @@ public enum SchedulePlan {
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if text.count < min || text.count > max {
             throw NotificationFailure(code: code, message: "\(name) must be \(min) to \(max) characters.")
-        }
-        return text
-    }
-
-    private static func optionalToken(_ value: Any?, _ pattern: String, _ name: String, _ code: String) throws -> String? {
-        if value == nil { return nil }
-        return try requireToken(value, pattern, name, code)
-    }
-
-    private static func requireToken(_ value: Any?, _ pattern: String, _ name: String, _ code: String) throws -> String {
-        guard let text = value as? String, text.range(of: pattern, options: .regularExpression) != nil else {
-            throw NotificationFailure(code: code, message: "\(name) has an invalid format.")
         }
         return text
     }

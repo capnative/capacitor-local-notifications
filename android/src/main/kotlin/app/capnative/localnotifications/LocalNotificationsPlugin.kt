@@ -75,8 +75,6 @@ class LocalNotificationsPlugin : Plugin() {
             }
             val store = NotificationStore(context)
             for (notification in parsed) {
-                notification.smallIcon?.let { NotificationPresenter.requireIcon(context, it) }
-                notification.largeIcon?.let { NotificationPresenter.requireIcon(context, it) }
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O && notification.sound != null) {
                     NotificationPresenter.requireLegacySound(context, notification.sound)
                 }
@@ -234,7 +232,6 @@ class LocalNotificationsPlugin : Plugin() {
         val json = JSObject()
         schedule.at?.let { json.put("at", it) }
         if (schedule.repeats) json.put("repeats", true)
-        if (schedule.allowWhileIdle) json.put("allowWhileIdle", true)
         schedule.every?.let { json.put("every", it) }
         schedule.count?.let { json.put("count", it) }
         schedule.on?.let { match ->

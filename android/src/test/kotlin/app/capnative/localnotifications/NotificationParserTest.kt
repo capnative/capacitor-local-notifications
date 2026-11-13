@@ -36,12 +36,11 @@ class NotificationParserTest {
                 "id" to 1,
                 "title" to "Repeat",
                 "body" to "Body",
-                "schedule" to mapOf("at" to "2026-11-05T15:32:45.000Z", "repeats" to true, "allowWhileIdle" to true),
+                "schedule" to mapOf("at" to "2026-11-05T15:32:45.000Z", "repeats" to true),
             ),
         )
         val plan = parsed.plan as FirePlan.FixedInterval
         assertEquals(120_000L, plan.intervalMs)
-        assertTrue(parsed.allowWhileIdle)
     }
 
     @Test
@@ -49,7 +48,6 @@ class NotificationParserTest {
         assertEquals("INVALID_NOTIFICATION", code(mapOf("id" to 1.5, "title" to "A", "body" to "B")))
         assertEquals("INVALID_NOTIFICATION", code(mapOf("id" to 1, "title" to "   ", "body" to "B")))
         assertEquals("INVALID_NOTIFICATION", code(mapOf("id" to 1, "title" to "A", "body" to "B", "sound" to "../beep.wav")))
-        assertEquals("INVALID_NOTIFICATION", code(mapOf("id" to 1, "title" to "A", "body" to "B", "smallIcon" to "Icon")))
         assertEquals(
             "INVALID_NOTIFICATION",
             code(mapOf("id" to 1, "title" to "A", "body" to "B", "extra" to mapOf("__proto__" to mapOf("admin" to true)))),

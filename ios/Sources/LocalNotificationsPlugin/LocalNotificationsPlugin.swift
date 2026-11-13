@@ -196,22 +196,6 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
         let content = UNMutableNotificationContent()
         content.title = notification.title
         content.body = notification.body
-        content.threadIdentifier = notification.threadIdentifier ?? ""
-        if let badge = notification.badge {
-            content.badge = NSNumber(value: badge)
-        }
-        if let level = notification.interruptionLevel {
-            switch level {
-            case "active": content.interruptionLevel = .active
-            case "critical": content.interruptionLevel = .critical
-            case "passive": content.interruptionLevel = .passive
-            case "timeSensitive": content.interruptionLevel = .timeSensitive
-            default: break
-            }
-        }
-        if let score = notification.relevanceScore {
-            content.relevanceScore = score
-        }
         if let sound = notification.sound {
             if sound == "default" {
                 content.sound = .default
@@ -219,7 +203,7 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
                 content.sound = UNNotificationSound(named: UNNotificationSoundName(sound))
             }
         }
-        var info: [AnyHashable: Any] = ["capnative": true, "silent": notification.silent]
+        var info: [AnyHashable: Any] = ["capnative": true]
         if let extra = notification.extraJSON { info["extra"] = extra }
         if let schedule = notification.schedule, let encoded = scheduleJSON(schedule) { info["schedule"] = encoded }
         content.userInfo = info
@@ -277,7 +261,6 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
         var object: [String: Any] = [:]
         if let at = schedule.at { object["at"] = at }
         if schedule.repeats { object["repeats"] = true }
-        if schedule.allowWhileIdle { object["allowWhileIdle"] = true }
         if let every = schedule.every { object["every"] = every }
         if let count = schedule.count { object["count"] = count }
         if let on = schedule.on {

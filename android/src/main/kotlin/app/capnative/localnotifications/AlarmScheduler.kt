@@ -20,13 +20,8 @@ internal class AlarmScheduler(private val context: Context) {
             fireIntent(notification.id),
             immutable(),
         )
-        val exact = canScheduleExact(alarmManager)
-        if (exact && notification.allowWhileIdle) {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
-        } else if (exact) {
+        if (canScheduleExact(alarmManager)) {
             alarmManager.setExact(AlarmManager.RTC, triggerAt, pending)
-        } else if (notification.allowWhileIdle) {
-            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
         } else {
             alarmManager.set(AlarmManager.RTC, triggerAt, pending)
         }

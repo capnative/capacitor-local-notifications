@@ -1,6 +1,5 @@
 package app.capnative.localnotifications
 
-import org.json.JSONArray
 import org.json.JSONObject
 
 internal object NotificationCodec {
@@ -9,23 +8,8 @@ internal object NotificationCodec {
         json.put("id", notification.id)
         json.put("title", notification.title)
         json.put("body", notification.body)
-        putOptional(json, "largeBody", notification.largeBody)
-        putOptional(json, "summaryText", notification.summaryText)
         putOptional(json, "sound", notification.sound)
-        putOptional(json, "smallIcon", notification.smallIcon)
-        putOptional(json, "largeIcon", notification.largeIcon)
-        putOptional(json, "iconColor", notification.iconColor)
         putOptional(json, "extraJson", notification.extraJson)
-        putOptional(json, "group", notification.group)
-        json.put("groupSummary", notification.groupSummary)
-        json.put("ongoing", notification.ongoing)
-        json.put("autoCancel", notification.autoCancel)
-        if (notification.inbox != null) {
-            val inbox = JSONArray()
-            notification.inbox.forEach { inbox.put(it) }
-            json.put("inbox", inbox)
-        }
-        json.put("allowWhileIdle", notification.allowWhileIdle)
         notification.schedule?.let { json.put("schedule", scheduleToJson(it)) }
         json.put("plan", planToJson(notification.plan))
         return json
@@ -33,27 +17,12 @@ internal object NotificationCodec {
 
     fun notificationFromJson(json: JSONObject): StoredNotification? {
         val plan = planFromJson(json.optJSONObject("plan")) ?: return null
-        val inboxJson = json.optJSONArray("inbox")
-        val inbox = inboxJson?.let { array ->
-            (0 until array.length()).map { array.getString(it) }
-        }
         return StoredNotification(
             id = json.getInt("id"),
             title = json.getString("title"),
             body = json.getString("body"),
-            largeBody = json.optStringOrNull("largeBody"),
-            summaryText = json.optStringOrNull("summaryText"),
             sound = json.optStringOrNull("sound"),
-            smallIcon = json.optStringOrNull("smallIcon"),
-            largeIcon = json.optStringOrNull("largeIcon"),
-            iconColor = json.optStringOrNull("iconColor"),
             extraJson = json.optStringOrNull("extraJson"),
-            group = json.optStringOrNull("group"),
-            groupSummary = json.optBoolean("groupSummary", false),
-            ongoing = json.optBoolean("ongoing", false),
-            autoCancel = json.optBoolean("autoCancel", true),
-            inbox = inbox,
-            allowWhileIdle = json.optBoolean("allowWhileIdle", false),
             schedule = json.optJSONObject("schedule")?.let { scheduleFromJson(it) },
             plan = plan,
         )
@@ -63,7 +32,6 @@ internal object NotificationCodec {
         val json = JSONObject()
         putOptional(json, "at", schedule.at)
         if (schedule.repeats) json.put("repeats", true)
-        if (schedule.allowWhileIdle) json.put("allowWhileIdle", true)
         putOptional(json, "every", schedule.every)
         schedule.count?.let { json.put("count", it) }
         schedule.on?.let { json.put("on", matchToJson(it)) }
@@ -74,7 +42,6 @@ internal object NotificationCodec {
         return ScheduleEcho(
             at = json.optStringOrNull("at"),
             repeats = json.optBoolean("repeats", false),
-            allowWhileIdle = json.optBoolean("allowWhileIdle", false),
             every = json.optStringOrNull("every"),
             count = if (json.has("count")) json.getInt("count") else null,
             on = json.optJSONObject("on")?.let { matchFromJson(it) },

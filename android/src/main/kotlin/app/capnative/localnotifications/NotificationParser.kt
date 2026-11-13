@@ -14,13 +14,9 @@ object NotificationParser {
     const val INT32_MIN = -2147483648
     const val INT32_MAX = 2147483647
 
-    private val RESOURCE_PATTERN = Regex("^[a-z0-9_]{1,100}$")
     private val SOUND_FILE_PATTERN = Regex("^[A-Za-z0-9_-]{1,100}\\.[A-Za-z0-9]{1,8}$")
-    private val GROUP_PATTERN = Regex("^[A-Za-z0-9_.-]{1,128}$")
     private val ISO_INSTANT = Regex("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?(?:Z|[+-]\\d{2}:\\d{2})$")
-    private val COLOR_PATTERN = Regex("^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
     private val EVERY = setOf("year", "month", "two-weeks", "week", "day", "hour", "minute", "second")
-    private val LEVELS = setOf("active", "critical", "passive", "timeSensitive")
 
     fun parseNotifications(items: List<*>, now: Long, zone: TimeZone): List<ValidatedNotification> {
         if (items.isEmpty()) {
@@ -47,30 +43,12 @@ object NotificationParser {
         val title = requireText(value["title"], 1, 200, "title", "INVALID_NOTIFICATION")
         val body = requireText(value["body"], 0, 2000, "body", "INVALID_NOTIFICATION")
         val scheduled = parseSchedule(value["schedule"], now, zone)
-        val group = optionalToken(value["group"], GROUP_PATTERN, "group", "INVALID_NOTIFICATION")
-        val groupSummary = optionalBool(value["groupSummary"], false, "groupSummary", "INVALID_NOTIFICATION")
-        if (groupSummary && group == null) {
-            throw NotificationException("INVALID_NOTIFICATION", "groupSummary requires group.")
-        }
-        val ongoing = optionalBool(value["ongoing"], false, "ongoing", "INVALID_NOTIFICATION")
-        val autoCancel = if (ongoing) false else optionalBool(value["autoCancel"], true, "autoCancel", "INVALID_NOTIFICATION")
         return ValidatedNotification(
             id = id,
             title = title,
             body = body,
-            largeBody = optionalText(value["largeBody"], 4000, "largeBody", "INVALID_NOTIFICATION"),
-            summaryText = optionalText(value["summaryText"], 200, "summaryText", "INVALID_NOTIFICATION"),
             sound = parseSound(value["sound"]),
-            smallIcon = optionalToken(value["smallIcon"], RESOURCE_PATTERN, "smallIcon", "INVALID_NOTIFICATION"),
-            largeIcon = optionalToken(value["largeIcon"], RESOURCE_PATTERN, "largeIcon", "INVALID_NOTIFICATION"),
-            iconColor = optionalColor(value["iconColor"], "iconColor", "INVALID_NOTIFICATION"),
             extraJson = parseExtra(value["extra"]),
-            group = group,
-            groupSummary = groupSummary,
-            ongoing = ongoing,
-            autoCancel = autoCancel,
-            inbox = parseInbox(value["inboxList"]),
-            allowWhileIdle = scheduled.allowWhileIdle,
             schedule = scheduled.echo,
             plan = scheduled.plan,
         )
@@ -109,12 +87,11 @@ object NotificationParser {
         else -> null
     }
 
-    private data class ParsedSchedule(val echo: ScheduleEcho?, val plan: FirePlan, val allowWhileIdle: Boolean)
+    private data class ParsedSchedule(val echo: ScheduleEcho?, val plan: FirePlan)
 
     private fun parseSchedule(value: Any?, now: Long, zone: TimeZone): ParsedSchedule {
-        if (value == null) return ParsedSchedule(null, FirePlan.Immediate, false)
+        if (value == null) return ParsedSchedule(null, FirePlan.Immediate)
         val map = asMap(value) ?: throw NotificationException("INVALID_SCHEDULE", "schedule must be an object.")
-        val allowWhileIdle = optionalBool(map["allowWhileIdle"], false, "allowWhileIdle", "INVALID_SCHEDULE")
         val hasAt = map.containsKey("at") && map["at"] != null
         val hasOn = map.containsKey("on") && map["on"] != null
         val hasEvery = map.containsKey("every") && map["every"] != null
@@ -144,18 +121,16 @@ object NotificationParser {
                 throw NotificationException("INVALID_SCHEDULE", "The first fire time must be within 8 years.")
             }
             return ParsedSchedule(
-                ScheduleEcho(every = unit.wire, count = count, allowWhileIdle = allowWhileIdle),
+                ScheduleEcho(every = unit.wire, count = count),
                 FirePlan.Interval(unit, count, now, nextMs),
-                allowWhileIdle,
             )
         }
         if (hasOn) {
             val on = parseCalendar(map["on"])
             val nextMs = ScheduleCalculator.nextCalendar(on, now, zone)
             return ParsedSchedule(
-                ScheduleEcho(on = on, allowWhileIdle = allowWhileIdle),
+                ScheduleEcho(on = on),
                 FirePlan.CalendarPlan(on, nextMs),
-                allowWhileIdle,
             )
         }
         if (hasAt) {
@@ -171,19 +146,16 @@ object NotificationParser {
             val at = iso(atMs)
             if (repeats) {
                 return ParsedSchedule(
-                    ScheduleEcho(at = at, repeats = true, allowWhileIdle = allowWhileIdle),
+                    ScheduleEcho(at = at, repeats = true),
                     FirePlan.FixedInterval(atMs, atMs - now, atMs),
-                    allowWhileIdle,
                 )
             }
             return ParsedSchedule(
-                ScheduleEcho(at = at, allowWhileIdle = allowWhileIdle),
+                ScheduleEcho(at = at),
                 FirePlan.Once(atMs),
-                allowWhileIdle,
             )
         }
-        val echo = if (allowWhileIdle) ScheduleEcho(allowWhileIdle = true) else null
-        return ParsedSchedule(echo, FirePlan.Immediate, allowWhileIdle)
+        return ParsedSchedule(null, FirePlan.Immediate)
     }
 
     private fun parseCalendar(value: Any?): CalendarMatch {
@@ -203,21 +175,6 @@ object NotificationParser {
             throw NotificationException("INVALID_SCHEDULE", "schedule.on must include at least one field.")
         }
         return match
-    }
-
-    private fun parseInbox(value: Any?): List<String>? {
-        if (value == null) return null
-        val list = listOf(value) ?: throw NotificationException("INVALID_NOTIFICATION", "inboxList must contain 1 to 5 strings.")
-        if (list.isEmpty() || list.size > 5) {
-            throw NotificationException("INVALID_NOTIFICATION", "inboxList must contain 1 to 5 strings.")
-        }
-        return list.map { line ->
-            val text = (line as? String)?.trim() ?: throw NotificationException("INVALID_NOTIFICATION", "inboxList entries must be strings.")
-            if (text.isEmpty() || text.length > 200) {
-                throw NotificationException("INVALID_NOTIFICATION", "Each inbox line must be 1 to 200 characters.")
-            }
-            text
-        }
     }
 
     private fun parseExtra(value: Any?): String? {
@@ -344,36 +301,11 @@ object NotificationParser {
         return null
     }
 
-    private fun optionalColor(value: Any?, name: String, code: String): String? {
-        if (value == null) return null
-        val text = value as? String
-        if (text == null || !COLOR_PATTERN.matches(text)) {
-            throw NotificationException(code, "$name must be a #RGB, #RRGGBB, or #AARRGGBB color.")
-        }
-        return text
-    }
-
-    private fun optionalText(value: Any?, max: Int, name: String, code: String): String? {
-        if (value == null) return null
-        return requireText(value, 1, max, name, code)
-    }
-
     private fun requireText(value: Any?, min: Int, max: Int, name: String, code: String): String {
         val text = (value as? String)?.trim() ?: throw NotificationException(code, "$name must be a string.")
         if (text.length < min || text.length > max) {
             throw NotificationException(code, "$name must be $min to $max characters.")
         }
-        return text
-    }
-
-    private fun optionalToken(value: Any?, pattern: Regex, name: String, code: String): String? {
-        if (value == null) return null
-        return requireToken(value, pattern, name, code)
-    }
-
-    private fun requireToken(value: Any?, pattern: Regex, name: String, code: String): String {
-        val text = value as? String
-        if (text == null || !pattern.matches(text)) throw NotificationException(code, "$name has an invalid format.")
         return text
     }
 

@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.media.AudioAttributes
 import android.net.Uri
@@ -56,40 +55,18 @@ internal object NotificationPresenter {
         val builder = NotificationCompat.Builder(context, Extras.DEFAULT_CHANNEL)
             .setContentTitle(notification.title)
             .setContentText(notification.body)
-            .setSmallIcon(smallIcon(context, notification.smallIcon, config?.getString("smallIcon")))
-            .setAutoCancel(notification.autoCancel && !notification.ongoing)
-            .setOngoing(notification.ongoing)
+            .setSmallIcon(smallIcon(context, config?.getString("smallIcon")))
+            .setAutoCancel(true)
             .setOnlyAlertOnce(true)
             .setWhen(System.currentTimeMillis())
             .setShowWhen(true)
-        val color = notification.iconColor ?: config?.getString("iconColor")
+        val color = config?.getString("iconColor")
         if (!color.isNullOrEmpty()) {
             try {
                 builder.color = colorInt(color)
             } catch (_: IllegalArgumentException) {
                 // A bad color in capacitor.config must not drop the notification.
             }
-        }
-        if (notification.largeIcon != null) {
-            val iconId = resourceId(context, "drawable", notification.largeIcon)
-            if (iconId != 0) {
-                val bitmap = BitmapFactory.decodeResource(context.resources, iconId)
-                if (bitmap != null) builder.setLargeIcon(bitmap)
-            }
-        }
-        if (!notification.inbox.isNullOrEmpty()) {
-            val style = NotificationCompat.InboxStyle().setBigContentTitle(notification.title)
-            notification.inbox.forEach { style.addLine(it) }
-            notification.summaryText?.let { style.setSummaryText(it) }
-            builder.setStyle(style)
-        } else if (notification.largeBody != null) {
-            val style = NotificationCompat.BigTextStyle().bigText(notification.largeBody)
-            notification.summaryText?.let { style.setSummaryText(it) }
-            builder.setStyle(style)
-        }
-        if (notification.group != null) {
-            builder.setGroup(notification.group)
-            builder.setGroupSummary(notification.groupSummary)
         }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             applyLegacySound(context, builder, notification.sound)
@@ -108,22 +85,15 @@ internal object NotificationPresenter {
         NotificationManagerCompat.from(context).cancel(id)
     }
 
-    fun requireIcon(context: Context, name: String) {
-        if (resourceId(context, "drawable", name) == 0) {
-            throw NotificationException("INVALID_NOTIFICATION", "Drawable $name was not found.")
-        }
-    }
-
     fun requireLegacySound(context: Context, name: String) {
         if (name != "default" && name.isNotEmpty() && resourceId(context, "raw", name) == 0) {
             throw NotificationException("INVALID_NOTIFICATION", "Sound resource $name was not found in res/raw.")
         }
     }
 
-    private fun smallIcon(context: Context, requested: String?, configured: String?): Int {
-        val name = requested ?: configured
-        if (name != null) {
-            val id = resourceId(context, "drawable", name)
+    private fun smallIcon(context: Context, configured: String?): Int {
+        if (configured != null) {
+            val id = resourceId(context, "drawable", configured)
             if (id != 0) return id
         }
         return R.drawable.ic_stat_capnative_notification

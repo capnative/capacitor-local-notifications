@@ -1,9 +1,4 @@
-import type {
-  InterruptionLevel,
-  LocalNotificationSchema,
-  Schedule,
-  ScheduleEvery,
-} from './definitions';
+import type { LocalNotificationSchema, Schedule, ScheduleEvery } from './definitions';
 import { LocalNotificationsError, type LocalNotificationErrorCode } from './errors';
 
 export const MIN_REPEAT_MS = 60_000;
@@ -25,11 +20,7 @@ const EVERY_UNITS: readonly ScheduleEvery[] = [
   'second',
 ];
 
-const INTERRUPTION_LEVELS: readonly InterruptionLevel[] = ['active', 'critical', 'passive', 'timeSensitive'];
-
-const RESOURCE_PATTERN = /^[a-z0-9_]{1,100}$/;
 const SOUND_FILE_PATTERN = /^[A-Za-z0-9_-]{1,100}\.[A-Za-z0-9]{1,8}$/;
-const GROUP_PATTERN = /^[A-Za-z0-9_.-]{1,128}$/;
 const ISO_INSTANT =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
 
@@ -53,7 +44,6 @@ export type FirePlan =
 export interface NormalizedSchedule {
   at?: string;
   repeats?: true;
-  allowWhileIdle?: true;
   on?: CalendarMatch;
   every?: ScheduleEvery;
   count?: number;
@@ -63,25 +53,8 @@ export interface ValidatedNotification {
   id: number;
   title: string;
   body: string;
-  largeBody?: string;
-  summaryText?: string;
   sound?: string;
-  smallIcon?: string;
-  largeIcon?: string;
-  iconColor?: string;
   extra?: Record<string, unknown>;
-  threadIdentifier?: string;
-  summaryArgument?: string;
-  relevanceScore?: number;
-  interruptionLevel?: InterruptionLevel;
-  group?: string;
-  groupSummary: boolean;
-  ongoing: boolean;
-  autoCancel: boolean;
-  inboxList?: string[];
-  silent: boolean;
-  badge?: number;
-  allowWhileIdle: boolean;
   schedule?: NormalizedSchedule;
   plan: FirePlan;
 }
@@ -116,52 +89,24 @@ export function parseNotification(value: unknown, now: number, index = 0): Valid
   const title = requireText(value.title, 1, 200, 'title', true);
   const body = requireText(value.body, 0, 2000, 'body', true);
   const scheduled = parseSchedule(value.schedule, now);
-  const group = optionalToken(value.group, GROUP_PATTERN, 'group');
-  const groupSummary = optionalBool(value.groupSummary, false, 'groupSummary');
-  if (groupSummary && !group) {
-    throw new LocalNotificationsError('INVALID_NOTIFICATION', 'groupSummary requires group.');
-  }
-  const ongoing = optionalBool(value.ongoing, false, 'ongoing');
-  const autoCancel = ongoing ? false : optionalBool(value.autoCancel, true, 'autoCancel');
   return {
     id,
     title,
     body,
-    largeBody: optionalText(value.largeBody, 4000, 'largeBody'),
-    summaryText: optionalText(value.summaryText, 200, 'summaryText'),
     sound: parseSound(value.sound),
-    smallIcon: optionalToken(value.smallIcon, RESOURCE_PATTERN, 'smallIcon'),
-    largeIcon: optionalToken(value.largeIcon, RESOURCE_PATTERN, 'largeIcon'),
-    iconColor: optionalColor(value.iconColor, 'iconColor'),
     extra: parseExtra(value.extra),
-    threadIdentifier: optionalToken(value.threadIdentifier, GROUP_PATTERN, 'threadIdentifier'),
-    summaryArgument: optionalText(value.summaryArgument, 200, 'summaryArgument'),
-    relevanceScore: optionalScore(value.relevanceScore),
-    interruptionLevel: optionalEnum(value.interruptionLevel, INTERRUPTION_LEVELS, 'interruptionLevel'),
-    group,
-    groupSummary,
-    ongoing,
-    autoCancel,
-    inboxList: parseInbox(value.inboxList),
-    silent: optionalBool(value.silent, false, 'silent'),
-    badge: value.badge === undefined ? undefined : requireInt(value.badge, 0, 999_999, 'badge'),
-    allowWhileIdle: scheduled.allowWhileIdle,
     schedule: scheduled.schedule,
     plan: scheduled.plan,
   };
 }
 
-export function parseSchedule(
-  value: unknown,
-  now: number,
-): { schedule?: NormalizedSchedule; plan: FirePlan; allowWhileIdle: boolean } {
+export function parseSchedule(value: unknown, now: number): { schedule?: NormalizedSchedule; plan: FirePlan } {
   if (value == null) {
-    return { plan: { kind: 'immediate' }, allowWhileIdle: false };
+    return { plan: { kind: 'immediate' } };
   }
   if (!isPlainObject(value)) {
     throw new LocalNotificationsError('INVALID_SCHEDULE', 'schedule must be an object.');
   }
-  const allowWhileIdle = optionalBool(value.allowWhileIdle, false, 'allowWhileIdle', 'INVALID_SCHEDULE');
   const hasAt = value.at !== undefined;
   const hasOn = value.on !== undefined;
   const hasEvery = value.every !== undefined;
@@ -175,8 +120,6 @@ export function parseSchedule(
     throw new LocalNotificationsError('INVALID_SCHEDULE', 'schedule.repeats is only valid together with schedule.at.');
   }
 
-  const idle = allowWhileIdle ? true : undefined;
-
   if (hasEvery) {
     const every = parseEvery(value.every);
     const count = value.count === undefined ? 1 : requireInt(value.count, 1, 1000, 'count', 'INVALID_SCHEDULE');
@@ -189,8 +132,7 @@ export function parseSchedule(
       throw new LocalNotificationsError('INVALID_SCHEDULE', 'The first fire time must be within 8 years.');
     }
     return {
-      allowWhileIdle,
-      schedule: { every, count, allowWhileIdle: idle },
+      schedule: { every, count },
       plan: { kind: 'interval', unit: every, count, anchorMs: now, nextMs },
     };
   }
@@ -199,8 +141,7 @@ export function parseSchedule(
     const on = parseCalendarMatch(value.on);
     const nextMs = nextCalendarOccurrence(on, now);
     return {
-      allowWhileIdle,
-      schedule: { on, allowWhileIdle: idle },
+      schedule: { on },
       plan: { kind: 'calendar', on, nextMs },
     };
   }
@@ -221,23 +162,17 @@ export function parseSchedule(
     if (repeats) {
       const intervalMs = atMs - now;
       return {
-        allowWhileIdle,
-        schedule: { at, repeats: true, allowWhileIdle: idle },
+        schedule: { at, repeats: true },
         plan: { kind: 'fixed-interval', anchorMs: atMs, intervalMs, nextMs: atMs },
       };
     }
     return {
-      allowWhileIdle,
-      schedule: { at, allowWhileIdle: idle },
+      schedule: { at },
       plan: { kind: 'once', atMs },
     };
   }
 
-  return {
-    allowWhileIdle,
-    schedule: idle ? { allowWhileIdle: true } : undefined,
-    plan: { kind: 'immediate' },
-  };
+  return { plan: { kind: 'immediate' } };
 }
 
 export function parseCancelIds(value: unknown): number[] {
@@ -365,25 +300,9 @@ export function toPublicNotification(notification: ValidatedNotification): Local
     id: notification.id,
     title: notification.title,
     body: notification.body,
-    largeBody: notification.largeBody,
-    summaryText: notification.summaryText,
     schedule: notification.schedule as Schedule | undefined,
     sound: notification.sound,
-    smallIcon: notification.smallIcon,
-    largeIcon: notification.largeIcon,
-    iconColor: notification.iconColor,
     extra: notification.extra,
-    threadIdentifier: notification.threadIdentifier,
-    summaryArgument: notification.summaryArgument,
-    relevanceScore: notification.relevanceScore,
-    interruptionLevel: notification.interruptionLevel,
-    group: notification.group,
-    groupSummary: notification.groupSummary || undefined,
-    ongoing: notification.ongoing || undefined,
-    autoCancel: notification.autoCancel,
-    inboxList: notification.inboxList,
-    silent: notification.silent || undefined,
-    badge: notification.badge,
   };
 }
 
@@ -521,23 +440,6 @@ function dateFieldsMatch(ms: number, match: CalendarMatch): boolean {
   return true;
 }
 
-function parseInbox(value: unknown): string[] | undefined {
-  if (value == null) return undefined;
-  if (!Array.isArray(value) || value.length === 0 || value.length > 5) {
-    throw new LocalNotificationsError('INVALID_NOTIFICATION', 'inboxList must contain 1 to 5 strings.');
-  }
-  return value.map((line) => {
-    if (typeof line !== 'string') {
-      throw new LocalNotificationsError('INVALID_NOTIFICATION', 'inboxList entries must be strings.');
-    }
-    const trimmed = line.trim();
-    if (trimmed.length === 0 || trimmed.length > 200) {
-      throw new LocalNotificationsError('INVALID_NOTIFICATION', 'Each inbox line must be 1 to 200 characters.');
-    }
-    return trimmed;
-  });
-}
-
 function parseExtra(value: unknown): Record<string, unknown> | undefined {
   if (value == null) return undefined;
   if (!isPlainObject(value)) {
@@ -607,35 +509,6 @@ function parseSound(value: unknown): string | undefined {
   return value;
 }
 
-function optionalScore(value: unknown): number | undefined {
-  if (value == null) return undefined;
-  return requireFinite(value, 0, 1, 'relevanceScore');
-}
-
-function optionalEnum<T extends string>(value: unknown, allowed: readonly T[], name: string): T | undefined {
-  if (value == null) return undefined;
-  if (typeof value === 'string' && (allowed as readonly string[]).includes(value)) return value as T;
-  throw new LocalNotificationsError('INVALID_NOTIFICATION', `${name} is not a supported value.`);
-}
-
-function optionalColor(value: unknown, name: string, code: LocalNotificationErrorCode = 'INVALID_NOTIFICATION'): string | undefined {
-  if (value == null) return undefined;
-  if (typeof value !== 'string' || !/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(value)) {
-    throw new LocalNotificationsError(code, `${name} must be a #RGB, #RRGGBB, or #AARRGGBB color.`);
-  }
-  return value;
-}
-
-function optionalText(
-  value: unknown,
-  max: number,
-  name: string,
-  code: LocalNotificationErrorCode = 'INVALID_NOTIFICATION',
-): string | undefined {
-  if (value == null) return undefined;
-  return requireText(value, 1, max, name, true, code);
-}
-
 function requireText(
   value: unknown,
   min: number,
@@ -652,18 +525,6 @@ function requireText(
     throw new LocalNotificationsError(code, `${name} must be ${min} to ${max} characters.`);
   }
   return text;
-}
-
-function optionalToken(value: unknown, pattern: RegExp, name: string, code: LocalNotificationErrorCode = 'INVALID_NOTIFICATION'): string | undefined {
-  if (value == null) return undefined;
-  return requireToken(value, pattern, name, code);
-}
-
-function requireToken(value: unknown, pattern: RegExp, name: string, code: LocalNotificationErrorCode = 'INVALID_NOTIFICATION'): string {
-  if (typeof value !== 'string' || !pattern.test(value)) {
-    throw new LocalNotificationsError(code, `${name} has an invalid format.`);
-  }
-  return value;
 }
 
 function optionalBool(
@@ -686,13 +547,6 @@ function requireInt(
 ): number {
   if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) {
     throw new LocalNotificationsError(code, `${name} must be an integer from ${min} to ${max}.`);
-  }
-  return value;
-}
-
-function requireFinite(value: unknown, min: number, max: number, name: string): number {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) {
-    throw new LocalNotificationsError('INVALID_NOTIFICATION', `${name} must be a number from ${min} to ${max}.`);
   }
   return value;
 }
