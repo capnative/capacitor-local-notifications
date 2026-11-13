@@ -51,22 +51,6 @@ export interface LocalNotificationsPlugin {
   registerActionTypes(options: RegisterActionTypesOptions): Promise<void>;
 
   /**
-   * Create or replace an Android notification channel.
-   * On Android 8+ the channel controls sound and importance. iOS accepts
-   * a valid channel and then does nothing with it.
-   * Android does not reliably apply changes to an existing channel id; delete it
-   * first, and expect a deleted id to stay on its old settings until reinstall
-   * if the user customized it.
-   */
-  createChannel(channel: Channel): Promise<void>;
-
-  /** Delete an Android notification channel. No-op on iOS. */
-  deleteChannel(args: { id: string }): Promise<void>;
-
-  /** List Android notification channels. iOS returns an empty list. */
-  listChannels(): Promise<ListChannelsResult>;
-
-  /**
    * Fired when this plugin posts a notification while the app process can
    * deliver JavaScript events. iOS does not emit this for notifications
    * delivered while the app is suspended. Android does not emit it when the
@@ -243,8 +227,8 @@ export interface LocalNotificationSchema {
   schedule?: Schedule;
   /**
    * iOS: a bundle file name, `default` for the system sound, or `''` for silence.
-   * Android 8+: ignored. Put the sound on a channel instead.
    * Android 7: a `res/raw` file name, `default`, or `''`.
+   * Android 8+: ignored. The plugin config `sound` is used, or the system default.
    */
   sound?: string;
   /** Android drawable resource name. Overrides the config `smallIcon`. */
@@ -276,11 +260,6 @@ export interface LocalNotificationSchema {
   group?: string;
   /** Android group summary. Requires `group`. */
   groupSummary?: boolean;
-  /**
-   * Android 8+ channel id. The channel must already exist.
-   * When omitted, the plugin posts to the `default` channel.
-   */
-  channelId?: string;
   /** Android: the notification cannot be swiped away. Forces `autoCancel` off. */
   ongoing?: boolean;
   /** Android: remove the notification when the user taps it. Defaults to true. */
@@ -376,41 +355,3 @@ export enum Weekday {
  * still be blocked by a Focus mode.
  */
 export type InterruptionLevel = 'active' | 'critical' | 'passive' | 'timeSensitive';
-
-export interface Channel {
-  id: string;
-  name: string;
-  description?: string;
-  /**
-   * `res/raw` file name, `''` for a silent channel, or omit for the system default.
-   * The resource must exist when a file name is set.
-   */
-  sound?: string;
-  /**
-   * Android importance 0 (none) through 5 (max). Defaults to 3.
-   * Values below 3 do not play a sound.
-   */
-  importance?: Importance;
-  /** Lock-screen visibility. `-1` secret, `0` private, `1` public. Defaults to 1. */
-  visibility?: Visibility;
-  /** Defaults to false. */
-  lights?: boolean;
-  /** `#RRGGBB` or `#AARRGGBB` when `lights` is true. */
-  lightColor?: string;
-  /** Defaults to true when importance is 3 or higher, otherwise false. */
-  vibration?: boolean;
-}
-
-/** Android `NotificationManager` importance. */
-export type Importance = 0 | 1 | 2 | 3 | 4 | 5;
-
-/** Android notification visibility. */
-export type Visibility = -1 | 0 | 1;
-
-export interface ListChannelsResult {
-  /**
-   * On Android, `sound` may be a resource URI rather than the file name that
-   * was passed to `createChannel`.
-   */
-  channels: Channel[];
-}

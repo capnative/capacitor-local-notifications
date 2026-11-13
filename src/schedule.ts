@@ -3,13 +3,10 @@ import type {
   ActionType,
   Attachment,
   AttachmentRect,
-  Channel,
-  Importance,
   InterruptionLevel,
   LocalNotificationSchema,
   Schedule,
   ScheduleEvery,
-  Visibility,
 } from './definitions';
 import { LocalNotificationsError, type LocalNotificationErrorCode } from './errors';
 
@@ -37,7 +34,6 @@ const INTERRUPTION_LEVELS: readonly InterruptionLevel[] = ['active', 'critical',
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const RESOURCE_PATTERN = /^[a-z0-9_]{1,100}$/;
 const SOUND_FILE_PATTERN = /^[A-Za-z0-9_-]{1,100}\.[A-Za-z0-9]{1,8}$/;
-const CHANNEL_ID_PATTERN = /^[A-Za-z0-9_.-]{1,100}$/;
 const GROUP_PATTERN = /^[A-Za-z0-9_.-]{1,128}$/;
 const ISO_INSTANT =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
@@ -87,7 +83,6 @@ export interface ValidatedNotification {
   interruptionLevel?: InterruptionLevel;
   group?: string;
   groupSummary: boolean;
-  channelId?: string;
   ongoing: boolean;
   autoCancel: boolean;
   inboxList?: string[];
@@ -158,7 +153,6 @@ export function parseNotification(value: unknown, now: number, index = 0): Valid
     interruptionLevel: optionalEnum(value.interruptionLevel, INTERRUPTION_LEVELS, 'interruptionLevel'),
     group,
     groupSummary,
-    channelId: optionalToken(value.channelId, CHANNEL_ID_PATTERN, 'channelId'),
     ongoing,
     autoCancel,
     inboxList: parseInbox(value.inboxList),
@@ -256,39 +250,6 @@ export function parseSchedule(
     allowWhileIdle,
     schedule: idle ? { allowWhileIdle: true } : undefined,
     plan: { kind: 'immediate' },
-  };
-}
-
-export function parseChannel(value: unknown): Channel {
-  if (!isPlainObject(value)) {
-    throw new LocalNotificationsError('INVALID_CHANNEL', 'A channel must be an object.');
-  }
-  const id = requireToken(value.id, CHANNEL_ID_PATTERN, 'id', 'INVALID_CHANNEL');
-  const name = requireText(value.name, 1, 100, 'name', true, 'INVALID_CHANNEL');
-  const importance = (value.importance === undefined
-    ? 3
-    : requireInt(value.importance, 0, 5, 'importance', 'INVALID_CHANNEL')) as Importance;
-  const visibility = (value.visibility === undefined
-    ? 1
-    : requireInt(value.visibility, -1, 1, 'visibility', 'INVALID_CHANNEL')) as Visibility;
-  const sound = parseChannelSound(value.sound);
-  const lights = optionalBool(value.lights, false, 'lights', 'INVALID_CHANNEL');
-  const vibration =
-    value.vibration === undefined ? importance >= 3 : optionalBool(value.vibration, false, 'vibration', 'INVALID_CHANNEL');
-  const lightColor = optionalColor(value.lightColor, 'lightColor', 'INVALID_CHANNEL');
-  if (lightColor && !lights) {
-    throw new LocalNotificationsError('INVALID_CHANNEL', 'lightColor requires lights to be true.');
-  }
-  return {
-    id,
-    name,
-    description: optionalText(value.description, 300, 'description', 'INVALID_CHANNEL'),
-    sound,
-    importance,
-    visibility,
-    lights,
-    lightColor,
-    vibration,
   };
 }
 
@@ -476,7 +437,6 @@ export function toPublicNotification(notification: ValidatedNotification): Local
     interruptionLevel: notification.interruptionLevel,
     group: notification.group,
     groupSummary: notification.groupSummary || undefined,
-    channelId: notification.channelId,
     ongoing: notification.ongoing || undefined,
     autoCancel: notification.autoCancel,
     inboxList: notification.inboxList,
@@ -812,18 +772,6 @@ function parseSound(value: unknown): string | undefined {
       'INVALID_NOTIFICATION',
       'sound must be "default", an empty string, or a file name such as beep.wav.',
     );
-  }
-  return value;
-}
-
-function parseChannelSound(value: unknown): string | undefined {
-  if (value == null) return undefined;
-  if (typeof value !== 'string') {
-    throw new LocalNotificationsError('INVALID_CHANNEL', 'sound must be a string.');
-  }
-  if (value === '') return '';
-  if (!SOUND_FILE_PATTERN.test(value)) {
-    throw new LocalNotificationsError('INVALID_CHANNEL', 'Channel sound must be a raw resource file name such as beep.wav, or an empty string for silence.');
   }
   return value;
 }

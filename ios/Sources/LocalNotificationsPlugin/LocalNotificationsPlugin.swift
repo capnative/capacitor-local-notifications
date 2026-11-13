@@ -14,9 +14,6 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "removeDeliveredNotifications", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "removeAllDeliveredNotifications", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "registerActionTypes", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "createChannel", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "deleteChannel", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "listChannels", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "checkPermissions", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestPermissions", returnType: CAPPluginReturnPromise),
     ]
@@ -178,27 +175,6 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
         } catch {
             call.reject("Action types could not be saved.", "INVALID_ACTION")
         }
-    }
-
-    @objc func createChannel(_ call: CAPPluginCall) {
-        let name = call.getString("name")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard validChannelId(call.getString("id")), !name.isEmpty, name.count <= 100 else {
-            call.reject("A channel needs a valid id and a name.", "INVALID_CHANNEL")
-            return
-        }
-        call.resolve()
-    }
-
-    @objc func deleteChannel(_ call: CAPPluginCall) {
-        guard validChannelId(call.getString("id")) else {
-            call.reject("id has an invalid format.", "INVALID_CHANNEL")
-            return
-        }
-        call.resolve()
-    }
-
-    @objc func listChannels(_ call: CAPPluginCall) {
-        call.resolve(["channels": []])
     }
 
     private func add(_ notifications: [ValidatedNotification], now: Date, call: CAPPluginCall) {
@@ -488,11 +464,6 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
             "iosHiddenPreviewsShowTitle": (value["iosHiddenPreviewsShowTitle"] as? Bool) ?? false,
             "iosHiddenPreviewsShowSubtitle": (value["iosHiddenPreviewsShowSubtitle"] as? Bool) ?? false,
         ]
-    }
-
-    private func validChannelId(_ id: String?) -> Bool {
-        guard let id else { return false }
-        return id.range(of: #"^[A-Za-z0-9_.-]{1,100}$"#, options: .regularExpression) != nil
     }
 
     private func bridgeObject(_ object: JSObject) -> [String: Any] {

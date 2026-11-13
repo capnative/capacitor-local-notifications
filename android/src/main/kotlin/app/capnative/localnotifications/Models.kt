@@ -76,18 +76,6 @@ data class ActionTypeSpec(
     val actions: List<ActionSpec> = emptyList(),
 )
 
-data class ChannelSpec(
-    val id: String,
-    val name: String,
-    val description: String? = null,
-    val sound: String? = null,
-    val importance: Int = 3,
-    val visibility: Int = 1,
-    val lights: Boolean = false,
-    val lightColor: String? = null,
-    val vibration: Boolean = true,
-)
-
 data class ValidatedNotification(
     val id: Int,
     val title: String,
@@ -102,7 +90,6 @@ data class ValidatedNotification(
     val extraJson: String? = null,
     val group: String? = null,
     val groupSummary: Boolean = false,
-    val channelId: String? = null,
     val ongoing: Boolean = false,
     val autoCancel: Boolean = true,
     val inbox: List<String>? = null,
@@ -125,7 +112,6 @@ data class StoredNotification(
     val extraJson: String? = null,
     val group: String? = null,
     val groupSummary: Boolean = false,
-    val channelId: String? = null,
     val ongoing: Boolean = false,
     val autoCancel: Boolean = true,
     val inbox: List<String>? = null,
@@ -136,5 +122,5 @@ data class StoredNotification(
 
 fun ValidatedNotification.toStored(): StoredNotification = StoredNotification(
     id, title, body, largeBody, summaryText, sound, smallIcon, largeIcon, iconColor, actionTypeId,
-    extraJson, group, groupSummary, channelId, ongoing, autoCancel, inbox, allowWhileIdle, schedule, plan,
+    extraJson, group, groupSummary, ongoing, autoCancel, inbox, allowWhileIdle, schedule, plan,
 )

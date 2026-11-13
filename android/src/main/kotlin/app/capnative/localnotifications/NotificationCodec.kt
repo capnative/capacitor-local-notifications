@@ -19,7 +19,6 @@ internal object NotificationCodec {
         putOptional(json, "extraJson", notification.extraJson)
         putOptional(json, "group", notification.group)
         json.put("groupSummary", notification.groupSummary)
-        putOptional(json, "channelId", notification.channelId)
         json.put("ongoing", notification.ongoing)
         json.put("autoCancel", notification.autoCancel)
         if (notification.inbox != null) {
@@ -53,7 +52,6 @@ internal object NotificationCodec {
             extraJson = json.optStringOrNull("extraJson"),
             group = json.optStringOrNull("group"),
             groupSummary = json.optBoolean("groupSummary", false),
-            channelId = json.optStringOrNull("channelId"),
             ongoing = json.optBoolean("ongoing", false),
             autoCancel = json.optBoolean("autoCancel", true),
             inbox = inbox,

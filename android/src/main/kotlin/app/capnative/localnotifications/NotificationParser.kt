@@ -17,7 +17,6 @@ object NotificationParser {
     private val ID_PATTERN = Regex("^[A-Za-z0-9_-]{1,64}$")
     private val RESOURCE_PATTERN = Regex("^[a-z0-9_]{1,100}$")
     private val SOUND_FILE_PATTERN = Regex("^[A-Za-z0-9_-]{1,100}\\.[A-Za-z0-9]{1,8}$")
-    private val CHANNEL_ID_PATTERN = Regex("^[A-Za-z0-9_.-]{1,100}$")
     private val GROUP_PATTERN = Regex("^[A-Za-z0-9_.-]{1,128}$")
     private val ISO_INSTANT = Regex("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?(?:Z|[+-]\\d{2}:\\d{2})$")
     private val COLOR_PATTERN = Regex("^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
@@ -74,38 +73,12 @@ object NotificationParser {
             extraJson = parseExtra(value["extra"]),
             group = group,
             groupSummary = groupSummary,
-            channelId = optionalToken(value["channelId"], CHANNEL_ID_PATTERN, "channelId", "INVALID_NOTIFICATION"),
             ongoing = ongoing,
             autoCancel = autoCancel,
             inbox = parseInbox(value["inboxList"]),
             allowWhileIdle = scheduled.allowWhileIdle,
             schedule = scheduled.echo,
             plan = scheduled.plan,
-        )
-    }
-
-    fun parseChannel(value: Map<String, Any?>): ChannelSpec {
-        val id = requireToken(value["id"], CHANNEL_ID_PATTERN, "id", "INVALID_CHANNEL")
-        val name = requireText(value["name"], 1, 100, "name", "INVALID_CHANNEL")
-        val importance = if (value["importance"] == null) 3 else requireInt(value["importance"], 0, 5, "importance", "INVALID_CHANNEL")
-        val visibility = if (value["visibility"] == null) 1 else requireInt(value["visibility"], -1, 1, "visibility", "INVALID_CHANNEL")
-        val sound = parseChannelSound(value["sound"])
-        val lights = optionalBool(value["lights"], false, "lights", "INVALID_CHANNEL")
-        val vibration = if (value["vibration"] == null) importance >= 3 else optionalBool(value["vibration"], false, "vibration", "INVALID_CHANNEL")
-        val lightColor = optionalColor(value["lightColor"], "lightColor", "INVALID_CHANNEL")
-        if (lightColor != null && !lights) {
-            throw NotificationException("INVALID_CHANNEL", "lightColor requires lights to be true.")
-        }
-        return ChannelSpec(
-            id = id,
-            name = name,
-            description = optionalText(value["description"], 300, "description", "INVALID_CHANNEL"),
-            sound = sound,
-            importance = importance,
-            visibility = visibility,
-            lights = lights,
-            lightColor = lightColor,
-            vibration = vibration,
         )
     }
 
@@ -364,16 +337,6 @@ object NotificationParser {
         if (text == "" || text == "default") return text
         if (!SOUND_FILE_PATTERN.matches(text)) {
             throw NotificationException("INVALID_NOTIFICATION", "sound must be \"default\", an empty string, or a file name such as beep.wav.")
-        }
-        return text
-    }
-
-    private fun parseChannelSound(value: Any?): String? {
-        if (value == null) return null
-        val text = value as? String ?: throw NotificationException("INVALID_CHANNEL", "sound must be a string.")
-        if (text == "") return ""
-        if (!SOUND_FILE_PATTERN.matches(text)) {
-            throw NotificationException("INVALID_CHANNEL", "Channel sound must be a raw resource file name such as beep.wav, or an empty string for silence.")
         }
         return text
     }

@@ -34,6 +34,7 @@ internal object Extras {
 }
 
 internal object NotificationPresenter {
+    /** Android 8+ refuses to post a notification unless one channel exists. */
     fun ensureDefaultChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
@@ -51,45 +52,12 @@ internal object NotificationPresenter {
         manager.createNotificationChannel(channel)
     }
 
-    fun createChannel(context: Context, spec: ChannelSpec) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val manager = context.getSystemService(NotificationManager::class.java) ?: return
-        val channel = NotificationChannel(spec.id, spec.name, spec.importance)
-        channel.description = spec.description ?: ""
-        channel.lockscreenVisibility = spec.visibility
-        channel.enableLights(spec.lights)
-        channel.enableVibration(spec.vibration)
-        if (spec.lightColor != null) {
-            channel.lightColor = colorInt(spec.lightColor)
-        }
-        when (spec.sound) {
-            null -> Unit
-            "" -> channel.setSound(null, null)
-            else -> {
-                val soundId = resourceId(context, "raw", spec.sound)
-                if (soundId == 0) {
-                    throw NotificationException("INVALID_CHANNEL", "Sound resource ${spec.sound} was not found in res/raw.")
-                }
-                channel.setSound(rawUri(context, soundId), audioAttributes())
-            }
-        }
-        manager.createNotificationChannel(channel)
-    }
-
-    fun channelExists(context: Context, id: String): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
-        val manager = context.getSystemService(NotificationManager::class.java) ?: return false
-        return manager.getNotificationChannel(id) != null
-    }
-
     fun show(context: Context, notification: StoredNotification, actions: List<ActionTypeSpec>) {
         ensureDefaultChannel(context)
         val manager = NotificationManagerCompat.from(context)
         if (!manager.areNotificationsEnabled()) return
-        val channelId = notification.channelId ?: Extras.DEFAULT_CHANNEL
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !channelExists(context, channelId)) return
         val config = pluginConfig(context)
-        val builder = NotificationCompat.Builder(context, channelId)
+        val builder = NotificationCompat.Builder(context, Extras.DEFAULT_CHANNEL)
             .setContentTitle(notification.title)
             .setContentText(notification.body)
             .setSmallIcon(smallIcon(context, notification.smallIcon, config?.getString("smallIcon")))

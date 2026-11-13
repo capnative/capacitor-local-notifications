@@ -1,6 +1,6 @@
 # @capnative/capacitor-local-notifications
 
-Local notifications for Capacitor 8. iOS uses `UNUserNotificationCenter`. Android uses notification channels and `AlarmManager`.
+Local notifications for Capacitor 8. iOS uses `UNUserNotificationCenter`. Android uses `AlarmManager`.
 
 ## Compatibility
 
@@ -72,9 +72,6 @@ await LocalNotifications.addListener('localNotificationActionPerformed', (action
 * [`removeDeliveredNotifications(...)`](#removedeliverednotifications)
 * [`removeAllDeliveredNotifications()`](#removealldeliverednotifications)
 * [`registerActionTypes(...)`](#registeractiontypes)
-* [`createChannel(...)`](#createchannel)
-* [`deleteChannel(...)`](#deletechannel)
-* [`listChannels()`](#listchannels)
 * [`addListener('localNotificationReceived', ...)`](#addlistenerlocalnotificationreceived-)
 * [`addListener('localNotificationActionPerformed', ...)`](#addlistenerlocalnotificationactionperformed-)
 * [`removeAllListeners()`](#removealllisteners)
@@ -222,54 +219,6 @@ iOS and Android show the buttons.
 --------------------
 
 
-### createChannel(...)
-
-```typescript
-createChannel(channel: Channel) => Promise<void>
-```
-
-Create or replace an Android notification channel.
-On Android 8+ the channel controls sound and importance. iOS accepts
-a valid channel and then does nothing with it.
-Android does not reliably apply changes to an existing channel id; delete it
-first, and expect a deleted id to stay on its old settings until reinstall
-if the user customized it.
-
-| Param         | Type                                        |
-| ------------- | ------------------------------------------- |
-| **`channel`** | <code><a href="#channel">Channel</a></code> |
-
---------------------
-
-
-### deleteChannel(...)
-
-```typescript
-deleteChannel(args: { id: string; }) => Promise<void>
-```
-
-Delete an Android notification channel. No-op on iOS.
-
-| Param      | Type                         |
-| ---------- | ---------------------------- |
-| **`args`** | <code>{ id: string; }</code> |
-
---------------------
-
-
-### listChannels()
-
-```typescript
-listChannels() => Promise<ListChannelsResult>
-```
-
-List Android notification channels. iOS returns an empty list.
-
-**Returns:** <code>Promise&lt;<a href="#listchannelsresult">ListChannelsResult</a>&gt;</code>
-
---------------------
-
-
 ### addListener('localNotificationReceived', ...)
 
 ```typescript
@@ -360,7 +309,7 @@ Platform-specific fields are ignored where the platform cannot apply them.
 | **`largeBody`**         | <code>string</code>                                              | Android big-text style. Ignored when `inboxList` is set.                                                                                                                                                                                                        |
 | **`summaryText`**       | <code>string</code>                                              | Android summary line for big-text and inbox styles.                                                                                                                                                                                                             |
 | **`schedule`**          | <code><a href="#schedule">Schedule</a></code>                    |                                                                                                                                                                                                                                                                 |
-| **`sound`**             | <code>string</code>                                              | iOS: a bundle file name, `default` for the system sound, or `''` for silence. Android 8+: ignored. Put the sound on a channel instead. Android 7: a `res/raw` file name, `default`, or `''`.                                                                    |
+| **`sound`**             | <code>string</code>                                              | iOS: a bundle file name, `default` for the system sound, or `''` for silence. Android 7: a `res/raw` file name, `default`, or `''`. Android 8+: ignored. The plugin config `sound` is used, or the system default. |
 | **`smallIcon`**         | <code>string</code>                                              | Android drawable resource name. Overrides the config `smallIcon`.                                                                                                                                                                                               |
 | **`largeIcon`**         | <code>string</code>                                              | Android large icon. Bitmap drawable resource name (`png` or `webp`, not a vector).                                                                                                                                                                              |
 | **`iconColor`**         | <code>string</code>                                              | Android icon tint. `#RGB`, `#RRGGBB`, or `#AARRGGBB`.                                                                                                                                                                                                           |
@@ -373,7 +322,6 @@ Platform-specific fields are ignored where the platform cannot apply them.
 | **`interruptionLevel`** | <code><a href="#interruptionlevel">InterruptionLevel</a></code>  | iOS interruption level. `critical` and `timeSensitive` need Apple entitlements.                                                                                                                                                                                 |
 | **`group`**             | <code>string</code>                                              | Android notification group key.                                                                                                                                                                                                                                 |
 | **`groupSummary`**      | <code>boolean</code>                                             | Android group summary. Requires `group`.                                                                                                                                                                                                                        |
-| **`channelId`**         | <code>string</code>                                              | Android 8+ channel id. The channel must already exist. When omitted, the plugin posts to the `default` channel.                                                                                                                                                 |
 | **`ongoing`**           | <code>boolean</code>                                             | Android: the notification cannot be swiped away. Forces `autoCancel` off.                                                                                                                                                                                       |
 | **`autoCancel`**        | <code>boolean</code>                                             | Android: remove the notification when the user taps it. Defaults to true.                                                                                                                                                                                       |
 | **`inboxList`**         | <code>string[]</code>                                            | Android inbox lines. At most five.                                                                                                                                                                                                                              |
@@ -516,28 +464,6 @@ Platform-specific fields are ignored where the platform cannot apply them.
 | **`inputPlaceholder`**       | <code>string</code>  | iOS text-input placeholder.                                                                                                                                                                                                                                        |
 
 
-#### Channel
-
-| Prop              | Type                                              | Description                                                                                                                      |
-| ----------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **`id`**          | <code>string</code>                               |                                                                                                                                  |
-| **`name`**        | <code>string</code>                               |                                                                                                                                  |
-| **`description`** | <code>string</code>                               |                                                                                                                                  |
-| **`sound`**       | <code>string</code>                               | `res/raw` file name, `''` for a silent channel, or omit for the system default. The resource must exist when a file name is set. |
-| **`importance`**  | <code><a href="#importance">Importance</a></code> | Android importance 0 (none) through 5 (max). Defaults to 3. Values below 3 do not play a sound.                                  |
-| **`visibility`**  | <code><a href="#visibility">Visibility</a></code> | Lock-screen visibility. `-1` secret, `0` private, `1` public. Defaults to 1.                                                     |
-| **`lights`**      | <code>boolean</code>                              | Defaults to false.                                                                                                               |
-| **`lightColor`**  | <code>string</code>                               | `#RRGGBB` or `#AARRGGBB` when `lights` is true.                                                                                  |
-| **`vibration`**   | <code>boolean</code>                              | Defaults to true when importance is 3 or higher, otherwise false.                                                                |
-
-
-#### ListChannelsResult
-
-| Prop           | Type                   | Description                                                                                             |
-| -------------- | ---------------------- | ------------------------------------------------------------------------------------------------------- |
-| **`channels`** | <code>Channel[]</code> | On Android, `sound` may be a resource URI rather than the file name that was passed to `createChannel`. |
-
-
 #### PluginListenerHandle
 
 | Prop         | Type                                      |
@@ -584,20 +510,6 @@ iOS interruption level.
 still be blocked by a Focus mode.
 
 <code>'active' | 'critical' | 'passive' | 'timeSensitive'</code>
-
-
-#### Importance
-
-Android `NotificationManager` importance.
-
-<code>0 | 1 | 2 | 3 | 4 | 5</code>
-
-
-#### Visibility
-
-Android notification visibility.
-
-<code>-1 | 0 | 1</code>
 
 
 ### Enums
@@ -674,10 +586,6 @@ iOS can combine `foreground`, `destructive`, and `requiresAuthentication`. Andro
 
 `removeAllDeliveredNotifications()` removes notifications this plugin posted. It does not clear notifications posted by another plugin. iOS notification ids still share one center, so two plugins should not reuse the same id.
 
-### Channels
-
-Android freezes a channel's importance and sound after creation. Deleting a channel does not always let you recreate it with new settings until the app is reinstalled, if the user changed it. The `default` channel is created when the plugin loads and when a notification is posted without `channelId`.
-
 ## Migration from `@capacitor/local-notifications`
 
 The method names and most fields match that plugin so existing calls are recognizable. These behaviors differ on purpose:
@@ -690,7 +598,8 @@ The method names and most fields match that plugin so existing calls are recogni
 - `removeAllDeliveredNotifications()` is limited to notifications this plugin posted.
 - iOS action options can be combined. The other plugin keeps only the first flag it sees.
 - Android action buttons open the app, including when `foreground` is false.
-- Per-notification `sound` is ignored on Android 8+. Configure the channel.
+- `createChannel()`, `deleteChannel()`, `listChannels()`, and `channelId` are not included.
+- Per-notification `sound` is ignored on Android 8+. Set `sound` in the plugin config, or the system default is used.
 - `areEnabled()` is not included. Use `checkPermissions()` and treat `display === 'granted'` as enabled.
 - `checkExactNotificationSetting()` and `changeExactNotificationSetting()` are not included. When Android denies exact alarms, `schedule()` uses an inexact alarm.
 - Deprecated type aliases from the other package are not re-exported.

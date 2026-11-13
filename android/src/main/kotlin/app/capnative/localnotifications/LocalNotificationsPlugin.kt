@@ -85,10 +85,6 @@ class LocalNotificationsPlugin : Plugin() {
                     )
                     return
                 }
-                if (notification.channelId != null && !NotificationPresenter.channelExists(context, notification.channelId)) {
-                    call.reject("Notification channel \"${notification.channelId}\" does not exist.", "INVALID_CHANNEL")
-                    return
-                }
                 notification.smallIcon?.let { NotificationPresenter.requireIcon(context, it) }
                 notification.largeIcon?.let { NotificationPresenter.requireIcon(context, it) }
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O && notification.sound != null) {
@@ -231,57 +227,6 @@ class LocalNotificationsPlugin : Plugin() {
         } catch (error: NotificationException) {
             call.reject(error.message, error.code)
         }
-    }
-
-    @PluginMethod
-    fun createChannel(call: PluginCall) {
-        try {
-            val data = NotificationParser.asMap(call.data)
-                ?: throw NotificationException("INVALID_CHANNEL", "A channel must be an object.")
-            val channel = NotificationParser.parseChannel(data)
-            NotificationPresenter.createChannel(context, channel)
-            call.resolve()
-        } catch (error: NotificationException) {
-            call.reject(error.message, error.code)
-        }
-    }
-
-    @PluginMethod
-    fun deleteChannel(call: PluginCall) {
-        try {
-            val id = call.getString("id")
-            NotificationParser.parseChannel(mapOf("id" to id, "name" to "unused"))
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.getSystemService(NotificationManager::class.java)?.deleteNotificationChannel(id)
-            }
-            call.resolve()
-        } catch (error: NotificationException) {
-            call.reject(error.message, error.code)
-        }
-    }
-
-    @PluginMethod
-    fun listChannels(call: PluginCall) {
-        val channels = JSArray()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager = context.getSystemService(NotificationManager::class.java)
-            for (channel in manager?.notificationChannels.orEmpty()) {
-                val json = JSObject()
-                json.put("id", channel.id)
-                json.put("name", channel.name?.toString() ?: "")
-                json.put("description", channel.description ?: "")
-                json.put("importance", channel.importance)
-                json.put("visibility", channel.lockscreenVisibility)
-                json.put("vibration", channel.shouldVibrate())
-                json.put("lights", channel.shouldShowLights())
-                json.put("lightColor", String.format("#%08X", channel.lightColor))
-                channel.sound?.let { json.put("sound", it.toString()) }
-                channels.put(json)
-            }
-        }
-        val result = JSObject()
-        result.put("channels", channels)
-        call.resolve(result)
     }
 
     private fun displayState(): String {

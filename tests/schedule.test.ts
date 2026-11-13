@@ -6,7 +6,6 @@ import {
   nextCalendarOccurrence,
   nextPlanAfter,
   parseActionTypes,
-  parseChannel,
   parseNotifications,
   toIso,
 } from '../src/schedule';
@@ -201,21 +200,7 @@ describe('nextCalendarOccurrence', () => {
   });
 });
 
-describe('channels and actions', () => {
-  it('defaults channel importance and rejects a bad id', () => {
-    expect(parseChannel({ id: 'reminders', name: ' Reminders ' })).toMatchObject({
-      id: 'reminders',
-      name: 'Reminders',
-      importance: 3,
-      visibility: 1,
-      vibration: true,
-      lights: false,
-    });
-    expect(parseChannel({ id: 'quiet', name: 'Quiet', importance: 2 }).vibration).toBe(false);
-    expect(codeOf(() => parseChannel({ id: '../x', name: 'Bad' }))).toBe('INVALID_CHANNEL');
-    expect(codeOf(() => parseChannel({ id: 'ok', name: 'Ok', lightColor: '#ff0000' }))).toBe('INVALID_CHANNEL');
-  });
-
+describe('actions', () => {
   it('caps action buttons and reserves tap and dismiss', () => {
     const types = parseActionTypes({
       types: [{ id: 'mail', actions: [{ id: 'reply', title: 'Reply', input: true }] }],

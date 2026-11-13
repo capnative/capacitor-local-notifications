@@ -66,13 +66,7 @@ class NotificationParserTest {
     }
 
     @Test
-    fun parsesChannelAndActions() {
-        val channel = NotificationParser.parseChannel(mapOf("id" to "reminders", "name" to " Reminders "))
-        assertEquals("reminders", channel.id)
-        assertEquals(3, channel.importance)
-        assertTrue(channel.vibration)
-        val quiet = NotificationParser.parseChannel(mapOf("id" to "quiet", "name" to "Quiet", "importance" to 2))
-        assertEquals(false, quiet.vibration)
+    fun parsesActions() {
         val types = NotificationParser.parseActionTypes(
             mapOf("types" to listOf(mapOf("id" to "mail", "actions" to listOf(mapOf("id" to "reply", "title" to "Reply", "input" to true))))),
         )
