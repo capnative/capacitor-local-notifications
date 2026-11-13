@@ -68,7 +68,6 @@ await LocalNotifications.addListener('localNotificationActionPerformed', (action
 * [`schedule(...)`](#schedule)
 * [`getPending()`](#getpending)
 * [`cancel(...)`](#cancel)
-* [`getDeliveredNotifications()`](#getdeliverednotifications)
 * [`removeDeliveredNotifications(...)`](#removedeliverednotifications)
 * [`removeAllDeliveredNotifications()`](#removealldeliverednotifications)
 * [`registerActionTypes(...)`](#registeractiontypes)
@@ -158,19 +157,6 @@ same ids. Unknown ids are ignored.
 | Param         | Type                                                    |
 | ------------- | ------------------------------------------------------- |
 | **`options`** | <code><a href="#canceloptions">CancelOptions</a></code> |
-
---------------------
-
-
-### getDeliveredNotifications()
-
-```typescript
-getDeliveredNotifications() => Promise<DeliveredNotifications>
-```
-
-Notifications this plugin has posted that are still in the notification shade.
-
-**Returns:** <code>Promise&lt;<a href="#deliverednotifications">DeliveredNotifications</a>&gt;</code>
 
 --------------------
 
@@ -595,6 +581,7 @@ The method names and most fields match that plugin so existing calls are recogni
 - Only one of `at`, `on`, and `every` may be set. `repeats` only belongs with `at`.
 - Repeats shorter than 60 seconds are rejected, including `every: 'second'` with `count` below 60. iOS rejects a repeating time-interval trigger under 60 seconds.
 - `at` in the past is rejected. Show it immediately by omitting `schedule`.
+- `getDeliveredNotifications()` is not included. `removeDeliveredNotifications()` and `removeAllDeliveredNotifications()` still remove notifications this plugin posted.
 - `removeAllDeliveredNotifications()` is limited to notifications this plugin posted.
 - iOS action options can be combined. The other plugin keeps only the first flag it sees.
 - Android action buttons open the app, including when `foreground` is false.

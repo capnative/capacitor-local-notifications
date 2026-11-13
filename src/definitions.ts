@@ -31,9 +31,6 @@ export interface LocalNotificationsPlugin {
    */
   cancel(options: CancelOptions): Promise<void>;
 
-  /** Notifications this plugin has posted that are still in the notification shade. */
-  getDeliveredNotifications(): Promise<DeliveredNotifications>;
-
   /** Remove specific delivered notifications posted by this plugin. */
   removeDeliveredNotifications(delivered: DeliveredNotifications): Promise<void>;
 

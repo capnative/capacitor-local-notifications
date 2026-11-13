@@ -1,7 +1,6 @@
 package app.capnative.localnotifications
 
 import android.Manifest
-import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
@@ -155,36 +154,6 @@ class LocalNotificationsPlugin : Plugin() {
         } catch (error: NotificationException) {
             call.reject(error.message, error.code)
         }
-    }
-
-    @PluginMethod
-    fun getDeliveredNotifications(call: PluginCall) {
-        val notifications = JSArray()
-        val manager = context.getSystemService(NotificationManager::class.java)
-        if (manager != null) {
-            for (active in manager.activeNotifications) {
-                val extras = active.notification.extras
-                if (extras.getString(Extras.MARKER) != Extras.MARKER_VALUE) continue
-                val json = JSObject()
-                json.put("id", extras.getInt(Extras.ID, active.id))
-                json.put("title", extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: "")
-                json.put("body", extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: "")
-                val group = active.notification.group
-                if (group != null) json.put("group", group)
-                json.put("groupSummary", (active.notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0)
-                extras.getString(Extras.EXTRA)?.let { extra ->
-                    try {
-                        json.put("extra", JSObject(extra))
-                    } catch (_: Exception) {
-                        // Ignore a payload that can no longer be parsed.
-                    }
-                }
-                notifications.put(json)
-            }
-        }
-        val result = JSObject()
-        result.put("notifications", notifications)
-        call.resolve(result)
     }
 
     @PluginMethod
