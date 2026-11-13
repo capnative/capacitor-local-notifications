@@ -69,13 +69,6 @@ class LocalNotificationsPlugin : Plugin() {
     }
 
     @PluginMethod
-    fun areEnabled(call: PluginCall) {
-        val result = JSObject()
-        result.put("value", displayState() == "granted")
-        call.resolve(result)
-    }
-
-    @PluginMethod
     fun checkExactNotificationSetting(call: PluginCall) {
         call.resolve(exactResult())
     }

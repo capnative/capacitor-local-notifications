@@ -19,7 +19,6 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "listChannels", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "checkPermissions", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestPermissions", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "areEnabled", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "checkExactNotificationSetting", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "changeExactNotificationSetting", returnType: CAPPluginReturnPromise),
     ]
@@ -64,15 +63,6 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
                 return
             }
             call.resolve(["display": granted ? "granted" : "denied"])
-        }
-    }
-
-    @objc func areEnabled(_ call: CAPPluginCall) {
-        center.getNotificationSettings { settings in
-            let allowed = settings.authorizationStatus == .authorized ||
-                settings.authorizationStatus == .provisional ||
-                settings.authorizationStatus == .ephemeral
-            call.resolve(["value": allowed && settings.notificationCenterSetting == .enabled])
         }
     }
 

@@ -16,11 +16,6 @@ export interface LocalNotificationsPlugin {
   requestPermissions(): Promise<PermissionStatus>;
 
   /**
-   * Whether notifications are currently allowed. Prefer `checkPermissions()`.
-   */
-  areEnabled(): Promise<EnabledResult>;
-
-  /**
    * Whether the app may schedule exact alarms.
    * Android 12+ reads `AlarmManager.canScheduleExactAlarms()`.
    * Older Android versions and iOS resolve `granted` because they have
@@ -124,10 +119,6 @@ export interface ExactAlarmStatus {
    * and falls back to an inexact alarm.
    */
   exact_alarm: PermissionState;
-}
-
-export interface EnabledResult {
-  value: boolean;
 }
 
 export interface ScheduleOptions {

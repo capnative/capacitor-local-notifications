@@ -65,7 +65,6 @@ await LocalNotifications.addListener('localNotificationActionPerformed', (action
 
 * [`checkPermissions()`](#checkpermissions)
 * [`requestPermissions()`](#requestpermissions)
-* [`areEnabled()`](#areenabled)
 * [`checkExactNotificationSetting()`](#checkexactnotificationsetting)
 * [`changeExactNotificationSetting()`](#changeexactnotificationsetting)
 * [`schedule(...)`](#schedule)
@@ -116,19 +115,6 @@ On Android 12 and older this does not show a dialog; it returns the
 current app notification setting.
 
 **Returns:** <code>Promise&lt;<a href="#permissionstatus">PermissionStatus</a>&gt;</code>
-
---------------------
-
-
-### areEnabled()
-
-```typescript
-areEnabled() => Promise<EnabledResult>
-```
-
-Whether notifications are currently allowed. Prefer `checkPermissions()`.
-
-**Returns:** <code>Promise&lt;<a href="#enabledresult">EnabledResult</a>&gt;</code>
 
 --------------------
 
@@ -378,13 +364,6 @@ Remove all listeners registered by this plugin.
 | Prop          | Type                                                        | Description                                                                 |
 | ------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------- |
 | **`display`** | <code><a href="#permissionstate">PermissionState</a></code> | `prompt` when the user has not been asked, otherwise `granted` or `denied`. |
-
-
-#### EnabledResult
-
-| Prop        | Type                 |
-| ----------- | -------------------- |
-| **`value`** | <code>boolean</code> |
 
 
 #### ExactAlarmStatus
@@ -752,6 +731,7 @@ The method names, `exact_alarm`, and most fields match that plugin so existing c
 - iOS action options can be combined. The other plugin keeps only the first flag it sees.
 - Android action buttons open the app, including when `foreground` is false.
 - Per-notification `sound` is ignored on Android 8+. Configure the channel.
+- `areEnabled()` is not included. Use `checkPermissions()` and treat `display === 'granted'` as enabled.
 - Deprecated type aliases from the other package are not re-exported.
 - `extra` is size-limited and should not contain secrets.
 
