@@ -1,7 +1,7 @@
 {
   "name": "@capnative/capacitor-local-notifications",
   "version": "8.0.0",
-  "description": "Schedule local notifications from Capacitor on iOS, Android, and the web.",
+  "description": "Schedule local notifications from Capacitor on iOS and Android.",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
@@ -38,7 +38,6 @@
     "clean": "rm -rf dist",
     "test": "TZ=UTC vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
-    "verify:web": "npm run typecheck && npm test && npm run build",
     "verify:android": "cd android && ./gradlew test --stacktrace",
     "prepublishOnly": "npm run build"
   },

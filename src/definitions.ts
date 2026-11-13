@@ -23,9 +23,8 @@ export interface LocalNotificationsPlugin {
   /**
    * Whether the app may schedule exact alarms.
    * Android 12+ reads `AlarmManager.canScheduleExactAlarms()`.
-   * Older Android versions, iOS, and web resolve `granted` because they have
-   * no separate exact-alarm switch. Web timers still only run while the page
-   * is open.
+   * Older Android versions and iOS resolve `granted` because they have
+   * no separate exact-alarm switch.
    */
   checkExactNotificationSetting(): Promise<ExactAlarmStatus>;
 
@@ -67,31 +66,31 @@ export interface LocalNotificationsPlugin {
   /**
    * Register notification action buttons. Call this before scheduling a
    * notification that sets `actionTypeId`. Replaces any types registered earlier.
-   * iOS and Android show the buttons. Web stores nothing visible; a click is reported as `tap`.
+   * iOS and Android show the buttons.
    */
   registerActionTypes(options: RegisterActionTypesOptions): Promise<void>;
 
   /**
    * Create or replace an Android notification channel.
-   * On Android 8+ the channel controls sound and importance. iOS and web accept
-   * a valid channel and then do nothing with it.
+   * On Android 8+ the channel controls sound and importance. iOS accepts
+   * a valid channel and then does nothing with it.
    * Android does not reliably apply changes to an existing channel id; delete it
    * first, and expect a deleted id to stay on its old settings until reinstall
    * if the user customized it.
    */
   createChannel(channel: Channel): Promise<void>;
 
-  /** Delete an Android notification channel. No-op on iOS and web. */
+  /** Delete an Android notification channel. No-op on iOS. */
   deleteChannel(args: { id: string }): Promise<void>;
 
-  /** List Android notification channels. iOS and web return an empty list. */
+  /** List Android notification channels. iOS returns an empty list. */
   listChannels(): Promise<ListChannelsResult>;
 
   /**
    * Fired when this plugin posts a notification while the app process can
    * deliver JavaScript events. iOS does not emit this for notifications
    * delivered while the app is suspended. Android does not emit it when the
-   * process is dead at delivery time. Web emits it only while the page is open.
+   * process is dead at delivery time.
    */
   addListener(
     eventName: 'localNotificationReceived',
@@ -211,7 +210,7 @@ export interface Action {
   foreground?: boolean;
   /** iOS destructive style. Android has no equivalent and ignores this flag. */
   destructive?: boolean;
-  /** Text input. iOS uses a text action; Android uses `RemoteInput`. Web cannot show it. */
+  /** Text input. iOS uses a text action; Android uses `RemoteInput`. */
   input?: boolean;
   /** iOS text-input button title. */
   inputButtonTitle?: string;
@@ -278,7 +277,6 @@ export interface LocalNotificationSchema {
    * iOS: a bundle file name, `default` for the system sound, or `''` for silence.
    * Android 8+: ignored. Put the sound on a channel instead.
    * Android 7: a `res/raw` file name, `default`, or `''`.
-   * Web: custom files are not played. A non-empty value requests the browser sound.
    */
   sound?: string;
   /** Android drawable resource name. Overrides the config `smallIcon`. */
@@ -327,8 +325,7 @@ export interface LocalNotificationSchema {
    */
   silent?: boolean;
   /**
-   * iOS application icon badge. Web calls `navigator.setAppBadge` when it exists.
-   * Android launcher badges are not set.
+   * iOS application icon badge. Android launcher badges are not set.
    */
   badge?: number;
 }
@@ -367,7 +364,7 @@ export interface Schedule {
    * after the call. The interval must be at least 60 seconds.
    * `second`, `minute`, and `hour` are fixed durations.
    * `day`, `week`, `two-weeks`, `month`, and `year` use local calendar addition on
-   * Android and web. On iOS every unit is the fixed duration measured when the
+   * Android. On iOS every unit is the fixed duration measured when the
    * notification is scheduled.
    */
   every?: ScheduleEvery;

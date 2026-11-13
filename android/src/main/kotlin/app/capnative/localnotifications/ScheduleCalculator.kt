@@ -5,8 +5,8 @@ import java.util.TimeZone
 
 /**
  * Local-calendar scheduling. Month and year addition follow JavaScript Date
- * overflow (31 January plus one month lands in early March) so Android matches
- * the web implementation. Fixed units use a constant duration.
+ * overflow (31 January plus one month lands in early March). Fixed units use
+ * a constant duration.
  */
 object ScheduleCalculator {
     const val MIN_REPEAT_MS = 60_000L

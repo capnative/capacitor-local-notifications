@@ -1,6 +1,6 @@
 # @capnative/capacitor-local-notifications
 
-Local notifications for Capacitor 8. iOS uses `UNUserNotificationCenter`, Android uses notification channels and `AlarmManager`, and the web implementation uses the browser Notification API while the page is open.
+Local notifications for Capacitor 8. iOS uses `UNUserNotificationCenter`. Android uses notification channels and `AlarmManager`.
 
 The plugin does not claim that every option works the same way on every platform. Limits are listed below.
 
@@ -14,7 +14,6 @@ The plugin does not claim that every option works the same way on every platform
 | --- | --- | --- |
 | iOS | 15 | Yes, through UserNotifications |
 | Android | API 24 (7.0) | Yes, through alarms restored after reboot |
-| Web | A browser with the Notification API | No. Timers run only while the page is open |
 
 Peer dependency: `@capacitor/core` `>= 8.0.0`.
 
@@ -79,10 +78,6 @@ export default config;
 ```
 
 `smallIcon`, `iconColor`, and `sound` apply to Android. `sound` is the default channel sound and does not change a channel Android has already created. `presentationOptions` applies to iOS while the app is in the foreground. Omit it to use banner, list, sound, and badge. An empty array presents nothing.
-
-### Web
-
-No native project is required. The page must be open. `localStorage` keeps pending notifications so a later visit can catch up, but a closed tab does not display them. Custom sound files are not played. Action buttons are not shown; a click is `tap`.
 
 ## Usage
 
@@ -149,20 +144,20 @@ await LocalNotifications.addListener('localNotificationActionPerformed', (action
 
 ## API
 
-| Method | iOS | Android | Web |
-| --- | --- | --- | --- |
-| `checkPermissions()` / `requestPermissions()` | Prompt and status | Android 13+ runtime prompt; older versions report the app setting | Notification API |
-| `areEnabled()` | Same signal as the permission | Same | Same |
-| `schedule()` | Yes | Yes | While the page is open |
-| `getPending()` / `cancel()` | Yes | Yes | Yes |
-| `getDeliveredNotifications()` | Notifications posted by this plugin | Notifications posted by this plugin | Notifications shown in this page |
-| `removeDeliveredNotifications()` / `removeAllDeliveredNotifications()` | This plugin only | This plugin only | This page only |
-| `registerActionTypes()` | Categories and buttons | Buttons, including text input | Stored for validation; buttons are not shown |
-| `createChannel()` / `deleteChannel()` / `listChannels()` | No-op after id/name checks. `listChannels` is empty | Android 8+ channels. Older versions no-op | No-op after validation. `listChannels` is empty |
-| `checkExactNotificationSetting()` | Resolves `granted` | Real setting on Android 12+. `granted` before that | Resolves `granted` |
-| `changeExactNotificationSetting()` | Resolves `granted` and does not navigate | Opens the exact-alarm screen on Android 12+ | Resolves `granted` and does not navigate |
+| Method | iOS | Android |
+| --- | --- | --- |
+| `checkPermissions()` / `requestPermissions()` | Prompt and status | Android 13+ runtime prompt; older versions report the app setting |
+| `areEnabled()` | Same signal as the permission | Same |
+| `schedule()` | Yes | Yes |
+| `getPending()` / `cancel()` | Yes | Yes |
+| `getDeliveredNotifications()` | Notifications posted by this plugin | Notifications posted by this plugin |
+| `removeDeliveredNotifications()` / `removeAllDeliveredNotifications()` | This plugin only | This plugin only |
+| `registerActionTypes()` | Categories and buttons | Buttons, including text input |
+| `createChannel()` / `deleteChannel()` / `listChannels()` | No-op after id/name checks. `listChannels` is empty | Android 8+ channels. Older versions no-op |
+| `checkExactNotificationSetting()` | Resolves `granted` | Real setting on Android 12+. `granted` before that |
+| `changeExactNotificationSetting()` | Resolves `granted` and does not navigate | Opens the exact-alarm screen on Android 12+ |
 
-`granted` on iOS and web means there is no second exact-alarm switch. It does not mean a web timer can fire while the tab is closed.
+`granted` on iOS means there is no second exact-alarm switch.
 
 ### Notification fields
 
@@ -172,8 +167,8 @@ await LocalNotifications.addListener('localNotificationActionPerformed', (action
 | `title`, `body` | Title is 1–200 characters. Body is 0–2000. Both are trimmed. |
 | `schedule` | See below. Omit it to show immediately. |
 | `extra` | JSON object, at most 4096 encoded characters. Not for secrets. Android notification listeners can read it. |
-| `sound` | iOS bundle file, `default`, or `''` for silence. Android 8+ ignores it; set the channel sound. Web plays the browser sound for any non-empty value. |
-| `badge` | iOS icon badge. Web calls `navigator.setAppBadge` when it exists. Android launcher badges are not set. |
+| `sound` | iOS bundle file, `default`, or `''` for silence. Android 8+ ignores it; set the channel sound. |
+| `badge` | iOS icon badge. Android launcher badges are not set. |
 | `attachments` | iOS only. A bundle file name or a `file://` URL inside the app sandbox, bundle, or temp directory. Remote URLs are rejected. Android accepts the field and does not display it. |
 | `actionTypeId` | Must be registered first. `tap` and `dismiss` are reserved. At most 3 buttons. |
 | `channelId` | Android 8+. The channel must already exist. Omitted notifications use the `default` channel. |
@@ -187,7 +182,6 @@ await LocalNotifications.addListener('localNotificationActionPerformed', (action
 
 - iOS does not emit it for a notification delivered while the app is suspended. The system still shows the notification.
 - Android does not emit it when the process is dead at delivery. The notification is still posted.
-- Web emits it only in the open page.
 
 `localNotificationActionPerformed` carries `actionId`, optional `inputValue`, and `notification`.
 
@@ -224,7 +218,7 @@ Use one of `at`, `on`, or `every`. Combining them is rejected. `repeats` is vali
 `every` repeats by `count` units (default 1, maximum 1000). `{ every: 'day', count: 2 }` means every two days, not "fire twice". The first fire is one interval after the call, and the interval must be at least 60 seconds. `every: 'second'` therefore needs `count >= 60`.
 
 - `second`, `minute`, and `hour` are fixed durations on every platform.
-- `day`, `week`, `two-weeks`, `month`, and `year` use local calendar addition on Android and web.
+- `day`, `week`, `two-weeks`, `month`, and `year` use local calendar addition on Android.
 - On iOS every `every` unit is the fixed duration measured when the notification is scheduled. A later daylight-saving change does not reshape it. Month and year repeats on iOS do not track calendar month lengths after the first interval.
 
 Adding a month follows JavaScript `Date` overflow: 31 January plus one month is early March in a non-leap year, not 28 February. iOS measures that first gap and then keeps it.
@@ -246,7 +240,7 @@ Examples:
 
 A local time that does not exist because of daylight saving is skipped. The next real match is used.
 
-Pending notifications are capped at 100. One `schedule()` call accepts at most 50. A one-shot that was due while the device was off is delivered once after boot (about 5 seconds later). Repeating notifications do not replay every missed occurrence; one catch-up is shown, then the schedule continues on its next future time. The web does the same when the page opens again.
+Pending notifications are capped at 100. One `schedule()` call accepts at most 50. A one-shot that was due while the device was off is delivered once after boot (about 5 seconds later). Repeating notifications do not replay every missed occurrence; one catch-up is shown, then the schedule continues on its next future time.
 
 ## Platform limits
 
@@ -256,15 +250,15 @@ Android 12 and newer can block exact alarms. `checkExactNotificationSetting()` r
 
 ### Foreground
 
-Android shows a notification whether or not the app is open. iOS uses `presentationOptions`, unless `silent` is true. Web browsers may group or suppress a notification for the focused tab; that is browser behavior.
+Android shows a notification whether or not the app is open. iOS uses `presentationOptions`, unless `silent` is true.
 
 ### Reboot and process death
 
-Android stores the pending payload in private app preferences and reschedules on `BOOT_COMPLETED`. Alarms are not direct-boot aware: they are restored after the user unlocks the device. iOS persists `UNNotificationRequest`s itself. Web has neither.
+Android stores the pending payload in private app preferences and reschedules on `BOOT_COMPLETED`. Alarms are not direct-boot aware: they are restored after the user unlocks the device. iOS persists `UNNotificationRequest`s itself.
 
 ### Actions
 
-iOS can combine `foreground`, `destructive`, and `requiresAuthentication`. Android has no destructive style and does not require authentication before a button. Text input uses `UNTextInputNotificationAction` on iOS and `RemoteInput` on Android. Web cannot show the buttons.
+iOS can combine `foreground`, `destructive`, and `requiresAuthentication`. Android has no destructive style and does not require authentication before a button. Text input uses `UNTextInputNotificationAction` on iOS and `RemoteInput` on Android.
 
 ### Delivered notifications
 
@@ -299,7 +293,7 @@ npm run build
 npm run verify:android
 ```
 
-`npm test` runs the TypeScript schedule and web tests in UTC. `verify:android` compiles the Android library and runs the JVM unit tests (`ScheduleCalculator` and `NotificationParser`). That is a real Android compile plus local unit tests. It does not install an app or run instrumented tests on a device or emulator.
+`npm test` runs the TypeScript schedule tests in UTC. `verify:android` compiles the Android library and runs the JVM unit tests (`ScheduleCalculator` and `NotificationParser`). That is a real Android compile plus local unit tests. It does not install an app or run instrumented tests on a device or emulator.
 
 iOS is Swift Package Manager and CocoaPods source. `xcodebuild` or `swift test` has to be run on macOS; this repository's Linux CI does not compile the iOS target. The Swift schedule tests live in `ios/Tests` for that macOS run.
 
