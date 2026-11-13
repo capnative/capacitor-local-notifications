@@ -36,7 +36,7 @@ export interface LocalNotificationsPlugin {
   changeExactNotificationSetting(): Promise<ExactAlarmStatus>;
 
   /**
-   * Schedule one or more notifications. The call is atomic: if any item is
+   * Add one or more notifications. The call is atomic: if any item is
    * invalid, nothing is scheduled. Scheduling an id that is already pending
    * replaces that notification.
    */
@@ -108,6 +108,7 @@ export interface LocalNotificationsPlugin {
     listenerFunc: (action: ActionPerformed) => void,
   ): Promise<PluginListenerHandle>;
 
+  /** Remove all listeners registered by this plugin. */
   removeAllListeners(): Promise<void>;
 }
 
@@ -134,11 +135,11 @@ export interface ScheduleOptions {
 }
 
 export interface ScheduleResult {
-  notifications: Array<{ id: number }>;
+  notifications: { id: number }[];
 }
 
 export interface CancelOptions {
-  notifications: Array<{ id: number }>;
+  notifications: { id: number }[];
 }
 
 export interface PendingResult {
@@ -151,7 +152,7 @@ export interface PendingLocalNotificationSchema {
   body: string;
   extra?: Record<string, unknown>;
   /**
-   * Schedule that was stored. `at`, when present, is an ISO-8601 UTC string
+   * The schedule that was stored. `at`, when present, is an ISO-8601 UTC string
    * even if a `Date` was passed to `schedule`.
    */
   schedule?: Schedule;

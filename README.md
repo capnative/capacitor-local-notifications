@@ -2,20 +2,18 @@
 
 Local notifications for Capacitor 8. iOS uses `UNUserNotificationCenter`. Android uses notification channels and `AlarmManager`.
 
-The plugin does not claim that every option works the same way on every platform. Limits are listed below.
-
 ## Compatibility
 
-| Plugin | Capacitor |
-| --- | --- |
-| 8.x | 8.x |
+| Plugin version | Capacitor compatibility | Maintained |
+| -------------- | ----------------------- | ---------- |
+| v8.\*.\*       | v8.\*.\*                | ✅         |
 
-| Platform | Minimum | Scheduling while the app is closed |
-| --- | --- | --- |
-| iOS | 15 | Yes, through UserNotifications |
-| Android | API 24 (7.0) | Yes, through alarms restored after reboot |
+## Supported platforms
 
-Peer dependency: `@capacitor/core` `>= 8.0.0`.
+| Platform | Support | Minimum version            |
+| -------- | ------- | -------------------------- |
+| iOS      | ✅      | iOS 15                     |
+| Android  | ✅      | API level 24 (Android 7.0) |
 
 ## Install
 
@@ -24,62 +22,7 @@ npm install @capnative/capacitor-local-notifications
 npx cap sync
 ```
 
-The published package is not on npm yet. Until it is, install from this repository after the package has been built (`npm run build` produces `dist/`).
-
-### iOS
-
-Capacitor 8 can consume the plugin with Swift Package Manager or CocoaPods.
-
-- SPM product: `CapnativeCapacitorLocalNotifications` in `Package.swift`
-- CocoaPod: `CapnativeCapacitorLocalNotifications`
-
-`npx cap sync` wires the package from `package.json`. The deployment target is iOS 15. No extra `Info.plist` usage description is required for local notifications. The system permission dialog is the runtime prompt from `requestPermissions()`.
-
-`critical` interruption level needs Apple's Critical Alerts entitlement. `timeSensitive` needs the Time Sensitive Notifications capability, and a Focus mode can still hide it.
-
-### Android
-
-The plugin manifest merges these permissions:
-
-- `POST_NOTIFICATIONS` (runtime prompt on Android 13+)
-- `RECEIVE_BOOT_COMPLETED` (restore alarms after reboot)
-- `SCHEDULE_EXACT_ALARM` (exact timing when the user allows it)
-- `WAKE_LOCK`
-
-It does **not** use `USE_EXACT_ALARM`. That permission is for alarm-clock and calendar apps and is restricted on Google Play. Exact alarms are requested only through `SCHEDULE_EXACT_ALARM`, which the user can deny. When it is denied, scheduling still succeeds and the alarm is inexact.
-
-An app that does not want the exact-alarm permission can remove it in the host manifest:
-
-```xml
-<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
-```
-
-Put a status-bar icon in `res/drawable`. It must be a white silhouette. The default icon is the plugin's `ic_stat_capnative_notification`. Large icons must be bitmap drawables (`png` or `webp`), not vectors.
-
-Sounds live in `res/raw`. On Android 8 and newer the sound belongs to the channel, not the individual notification.
-
-### Capacitor config
-
-```typescript
-import type { CapacitorConfig } from '@capacitor/cli';
-
-const config: CapacitorConfig = {
-  plugins: {
-    LocalNotifications: {
-      smallIcon: 'ic_stat_notify',
-      iconColor: '#488AFF',
-      sound: 'beep.wav',
-      presentationOptions: ['banner', 'list', 'sound', 'badge'],
-    },
-  },
-};
-
-export default config;
-```
-
-`smallIcon`, `iconColor`, and `sound` apply to Android. `sound` is the default channel sound and does not change a channel Android has already created. `presentationOptions` applies to iOS while the app is in the foreground. Omit it to use banner, list, sound, and badge. An empty array presents nothing.
-
-## Usage
+## Basic usage
 
 ```typescript
 import { LocalNotifications, Weekday } from '@capnative/capacitor-local-notifications';
@@ -89,25 +32,6 @@ if (permission.display !== 'granted') {
   throw new Error('Notifications are blocked.');
 }
 
-await LocalNotifications.registerActionTypes({
-  types: [
-    {
-      id: 'reminder',
-      actions: [
-        { id: 'done', title: 'Done', foreground: true },
-        { id: 'reply', title: 'Reply', input: true, inputPlaceholder: 'Note' },
-      ],
-    },
-  ],
-});
-
-await LocalNotifications.createChannel({
-  id: 'reminders',
-  name: 'Reminders',
-  importance: 4,
-  sound: 'beep.wav',
-});
-
 await LocalNotifications.schedule({
   notifications: [
     { id: 1, title: 'Now', body: 'Shown immediately' },
@@ -116,96 +40,643 @@ await LocalNotifications.schedule({
       title: 'Later',
       body: 'One shot',
       schedule: { at: new Date(Date.now() + 60 * 60 * 1000) },
-      extra: { path: '/inbox' },
     },
     {
       id: 3,
       title: 'Weekdays',
       body: '09:00 local time',
       schedule: { on: { weekday: Weekday.Monday, hour: 9, minute: 0 } },
-      channelId: 'reminders',
-      actionTypeId: 'reminder',
     },
   ],
 });
 
 await LocalNotifications.addListener('localNotificationReceived', (notification) => {
-  console.log('posted', notification.id);
+  console.log(notification);
 });
 
 await LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
-  console.log(action.actionId, action.inputValue, action.notification.extra);
+  console.log(action);
 });
 ```
 
-`schedule()` is atomic. If any item is invalid, or an `actionTypeId` was not registered, nothing new is scheduled. Using an id that is already pending replaces that notification.
-
-`cancel()` removes the pending alarm and the delivered notification with that id. Unknown ids are ignored.
-
 ## API
 
-| Method | iOS | Android |
-| --- | --- | --- |
-| `checkPermissions()` / `requestPermissions()` | Prompt and status | Android 13+ runtime prompt; older versions report the app setting |
-| `areEnabled()` | Same signal as the permission | Same |
-| `schedule()` | Yes | Yes |
-| `getPending()` / `cancel()` | Yes | Yes |
-| `getDeliveredNotifications()` | Notifications posted by this plugin | Notifications posted by this plugin |
-| `removeDeliveredNotifications()` / `removeAllDeliveredNotifications()` | This plugin only | This plugin only |
-| `registerActionTypes()` | Categories and buttons | Buttons, including text input |
-| `createChannel()` / `deleteChannel()` / `listChannels()` | No-op after id/name checks. `listChannels` is empty | Android 8+ channels. Older versions no-op |
-| `checkExactNotificationSetting()` | Resolves `granted` | Real setting on Android 12+. `granted` before that |
-| `changeExactNotificationSetting()` | Resolves `granted` and does not navigate | Opens the exact-alarm screen on Android 12+ |
+<docgen-index>
 
-`granted` on iOS means there is no second exact-alarm switch.
+* [`checkPermissions()`](#checkpermissions)
+* [`requestPermissions()`](#requestpermissions)
+* [`areEnabled()`](#areenabled)
+* [`checkExactNotificationSetting()`](#checkexactnotificationsetting)
+* [`changeExactNotificationSetting()`](#changeexactnotificationsetting)
+* [`schedule(...)`](#schedule)
+* [`getPending()`](#getpending)
+* [`cancel(...)`](#cancel)
+* [`getDeliveredNotifications()`](#getdeliverednotifications)
+* [`removeDeliveredNotifications(...)`](#removedeliverednotifications)
+* [`removeAllDeliveredNotifications()`](#removealldeliverednotifications)
+* [`registerActionTypes(...)`](#registeractiontypes)
+* [`createChannel(...)`](#createchannel)
+* [`deleteChannel(...)`](#deletechannel)
+* [`listChannels()`](#listchannels)
+* [`addListener('localNotificationReceived', ...)`](#addlistenerlocalnotificationreceived-)
+* [`addListener('localNotificationActionPerformed', ...)`](#addlistenerlocalnotificationactionperformed-)
+* [`removeAllListeners()`](#removealllisteners)
+* [Interfaces](#interfaces)
+* [Type Aliases](#type-aliases)
+* [Enums](#enums)
 
-### Notification fields
+</docgen-index>
 
-| Field | Notes |
-| --- | --- |
-| `id` | 32-bit integer. The same id replaces a pending notification. |
-| `title`, `body` | Title is 1–200 characters. Body is 0–2000. Both are trimmed. |
-| `schedule` | See below. Omit it to show immediately. |
-| `extra` | JSON object, at most 4096 encoded characters. Not for secrets. Android notification listeners can read it. |
-| `sound` | iOS bundle file, `default`, or `''` for silence. Android 8+ ignores it; set the channel sound. |
-| `badge` | iOS icon badge. Android launcher badges are not set. |
-| `attachments` | iOS only. A bundle file name or a `file://` URL inside the app sandbox, bundle, or temp directory. Remote URLs are rejected. Android accepts the field and does not display it. |
-| `actionTypeId` | Must be registered first. `tap` and `dismiss` are reserved. At most 3 buttons. |
-| `channelId` | Android 8+. The channel must already exist. Omitted notifications use the `default` channel. |
-| `group`, `groupSummary`, `inboxList`, `largeBody`, `summaryText`, `ongoing`, `autoCancel`, `smallIcon`, `largeIcon`, `iconColor` | Android. `groupSummary` requires `group`. `ongoing` forces `autoCancel` off. |
-| `threadIdentifier`, `relevanceScore`, `interruptionLevel`, `silent`, `summaryArgument` | iOS. `summaryArgument` is ignored on iOS 15+. `silent` hides a foreground presentation but still emits `localNotificationReceived`. |
-| `allowWhileIdle` | Android Doze only. The system still limits exact idle alarms to roughly one every 9 minutes per app. |
+<docgen-api>
+<!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
 
-### Events
-
-`localNotificationReceived` fires when this plugin posts a notification and the JavaScript bridge is running.
-
-- iOS does not emit it for a notification delivered while the app is suspended. The system still shows the notification.
-- Android does not emit it when the process is dead at delivery. The notification is still posted.
-
-`localNotificationActionPerformed` carries `actionId`, optional `inputValue`, and `notification`.
-
-- `tap` is the notification body.
-- `dismiss` is a clear. iOS reports it because categories include a custom dismiss action. Android reports it only while the process is alive.
-- Other ids are the buttons from `registerActionTypes`.
-
-### Permissions result
+### checkPermissions()
 
 ```typescript
-interface PermissionStatus {
-  display: 'prompt' | 'prompt-with-rationale' | 'granted' | 'denied';
-}
+checkPermissions() => Promise<PermissionStatus>
 ```
 
-This plugin returns `prompt`, `granted`, or `denied`. On Android 12 and older, `requestPermissions()` does not show a dialog. If the user has disabled notifications, the result is `denied` and the app must send them to system settings.
+Ask the system whether notifications can be displayed.
+Android 13+ reports the `POST_NOTIFICATIONS` runtime permission.
+Older Android versions report the app notification setting.
+
+**Returns:** <code>Promise&lt;<a href="#permissionstatus">PermissionStatus</a>&gt;</code>
+
+--------------------
+
+
+### requestPermissions()
 
 ```typescript
-interface ExactAlarmStatus {
-  exact_alarm: 'prompt' | 'prompt-with-rationale' | 'granted' | 'denied';
-}
+requestPermissions() => Promise<PermissionStatus>
 ```
 
-The key is `exact_alarm`, matching the familiar Capacitor local-notification shape.
+Request permission to display notifications.
+On Android 12 and older this does not show a dialog; it returns the
+current app notification setting.
+
+**Returns:** <code>Promise&lt;<a href="#permissionstatus">PermissionStatus</a>&gt;</code>
+
+--------------------
+
+
+### areEnabled()
+
+```typescript
+areEnabled() => Promise<EnabledResult>
+```
+
+Whether notifications are currently allowed. Prefer `checkPermissions()`.
+
+**Returns:** <code>Promise&lt;<a href="#enabledresult">EnabledResult</a>&gt;</code>
+
+--------------------
+
+
+### checkExactNotificationSetting()
+
+```typescript
+checkExactNotificationSetting() => Promise<ExactAlarmStatus>
+```
+
+Whether the app may schedule exact alarms.
+Android 12+ reads `AlarmManager.canScheduleExactAlarms()`.
+Older Android versions and iOS resolve `granted` because they have
+no separate exact-alarm switch.
+
+**Returns:** <code>Promise&lt;<a href="#exactalarmstatus">ExactAlarmStatus</a>&gt;</code>
+
+--------------------
+
+
+### changeExactNotificationSetting()
+
+```typescript
+changeExactNotificationSetting() => Promise<ExactAlarmStatus>
+```
+
+Open the system screen where the user allows exact alarms.
+On Android 12+ this leaves the app. Other platforms resolve `granted`
+and do not navigate.
+
+**Returns:** <code>Promise&lt;<a href="#exactalarmstatus">ExactAlarmStatus</a>&gt;</code>
+
+--------------------
+
+
+### schedule(...)
+
+```typescript
+schedule(options: ScheduleOptions) => Promise<ScheduleResult>
+```
+
+Add one or more notifications. The call is atomic: if any item is
+invalid, nothing is scheduled. Scheduling an id that is already pending
+replaces that notification.
+
+| Param         | Type                                                        |
+| ------------- | ----------------------------------------------------------- |
+| **`options`** | <code><a href="#scheduleoptions">ScheduleOptions</a></code> |
+
+**Returns:** <code>Promise&lt;<a href="#scheduleresult">ScheduleResult</a>&gt;</code>
+
+--------------------
+
+
+### getPending()
+
+```typescript
+getPending() => Promise<PendingResult>
+```
+
+Pending notifications that have not fired yet.
+
+**Returns:** <code>Promise&lt;<a href="#pendingresult">PendingResult</a>&gt;</code>
+
+--------------------
+
+
+### cancel(...)
+
+```typescript
+cancel(options: CancelOptions) => Promise<void>
+```
+
+Cancel pending notifications and remove delivered notifications with the
+same ids. Unknown ids are ignored.
+
+| Param         | Type                                                    |
+| ------------- | ------------------------------------------------------- |
+| **`options`** | <code><a href="#canceloptions">CancelOptions</a></code> |
+
+--------------------
+
+
+### getDeliveredNotifications()
+
+```typescript
+getDeliveredNotifications() => Promise<DeliveredNotifications>
+```
+
+Notifications this plugin has posted that are still in the notification shade.
+
+**Returns:** <code>Promise&lt;<a href="#deliverednotifications">DeliveredNotifications</a>&gt;</code>
+
+--------------------
+
+
+### removeDeliveredNotifications(...)
+
+```typescript
+removeDeliveredNotifications(delivered: DeliveredNotifications) => Promise<void>
+```
+
+Remove specific delivered notifications posted by this plugin.
+
+| Param           | Type                                                                      |
+| --------------- | ------------------------------------------------------------------------- |
+| **`delivered`** | <code><a href="#deliverednotifications">DeliveredNotifications</a></code> |
+
+--------------------
+
+
+### removeAllDeliveredNotifications()
+
+```typescript
+removeAllDeliveredNotifications() => Promise<void>
+```
+
+Remove delivered notifications posted by this plugin.
+Notifications posted by other libraries are left in place.
+
+--------------------
+
+
+### registerActionTypes(...)
+
+```typescript
+registerActionTypes(options: RegisterActionTypesOptions) => Promise<void>
+```
+
+Register notification action buttons. Call this before scheduling a
+notification that sets `actionTypeId`. Replaces any types registered earlier.
+iOS and Android show the buttons.
+
+| Param         | Type                                                                              |
+| ------------- | --------------------------------------------------------------------------------- |
+| **`options`** | <code><a href="#registeractiontypesoptions">RegisterActionTypesOptions</a></code> |
+
+--------------------
+
+
+### createChannel(...)
+
+```typescript
+createChannel(channel: Channel) => Promise<void>
+```
+
+Create or replace an Android notification channel.
+On Android 8+ the channel controls sound and importance. iOS accepts
+a valid channel and then does nothing with it.
+Android does not reliably apply changes to an existing channel id; delete it
+first, and expect a deleted id to stay on its old settings until reinstall
+if the user customized it.
+
+| Param         | Type                                        |
+| ------------- | ------------------------------------------- |
+| **`channel`** | <code><a href="#channel">Channel</a></code> |
+
+--------------------
+
+
+### deleteChannel(...)
+
+```typescript
+deleteChannel(args: { id: string; }) => Promise<void>
+```
+
+Delete an Android notification channel. No-op on iOS.
+
+| Param      | Type                         |
+| ---------- | ---------------------------- |
+| **`args`** | <code>{ id: string; }</code> |
+
+--------------------
+
+
+### listChannels()
+
+```typescript
+listChannels() => Promise<ListChannelsResult>
+```
+
+List Android notification channels. iOS returns an empty list.
+
+**Returns:** <code>Promise&lt;<a href="#listchannelsresult">ListChannelsResult</a>&gt;</code>
+
+--------------------
+
+
+### addListener('localNotificationReceived', ...)
+
+```typescript
+addListener(eventName: 'localNotificationReceived', listenerFunc: (notification: LocalNotificationSchema) => void) => Promise<PluginListenerHandle>
+```
+
+Fired when this plugin posts a notification while the app process can
+deliver JavaScript events. iOS does not emit this for notifications
+delivered while the app is suspended. Android does not emit it when the
+process is dead at delivery time.
+
+| Param              | Type                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| **`eventName`**    | <code>'localNotificationReceived'</code>                                                               |
+| **`listenerFunc`** | <code>(notification: <a href="#localnotificationschema">LocalNotificationSchema</a>) =&gt; void</code> |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
+
+--------------------
+
+
+### addListener('localNotificationActionPerformed', ...)
+
+```typescript
+addListener(eventName: 'localNotificationActionPerformed', listenerFunc: (action: ActionPerformed) => void) => Promise<PluginListenerHandle>
+```
+
+Fired when the user taps a notification or one of its actions.
+`actionId` is `tap` for the notification body and `dismiss` when the
+notification is cleared. Dismiss is delivered on Android only while the
+process is alive.
+
+| Param              | Type                                                                             |
+| ------------------ | -------------------------------------------------------------------------------- |
+| **`eventName`**    | <code>'localNotificationActionPerformed'</code>                                  |
+| **`listenerFunc`** | <code>(action: <a href="#actionperformed">ActionPerformed</a>) =&gt; void</code> |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
+
+--------------------
+
+
+### removeAllListeners()
+
+```typescript
+removeAllListeners() => Promise<void>
+```
+
+Remove all listeners registered by this plugin.
+
+--------------------
+
+
+### Interfaces
+
+
+#### PermissionStatus
+
+| Prop          | Type                                                        | Description                                                                 |
+| ------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **`display`** | <code><a href="#permissionstate">PermissionState</a></code> | `prompt` when the user has not been asked, otherwise `granted` or `denied`. |
+
+
+#### EnabledResult
+
+| Prop        | Type                 |
+| ----------- | -------------------- |
+| **`value`** | <code>boolean</code> |
+
+
+#### ExactAlarmStatus
+
+| Prop              | Type                                                        | Description                                                                                                                                                                                       |
+| ----------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`exact_alarm`** | <code><a href="#permissionstate">PermissionState</a></code> | `granted` when exact alarms may be used or the platform has no separate switch. `denied` when Android 12+ is blocking exact alarms. Scheduling still succeeds and falls back to an inexact alarm. |
+
+
+#### ScheduleResult
+
+| Prop                | Type                           |
+| ------------------- | ------------------------------ |
+| **`notifications`** | <code>{ id: number; }[]</code> |
+
+
+#### ScheduleOptions
+
+| Prop                | Type                                   |
+| ------------------- | -------------------------------------- |
+| **`notifications`** | <code>LocalNotificationSchema[]</code> |
+
+
+#### LocalNotificationSchema
+
+A local notification.
+Platform-specific fields are ignored where the platform cannot apply them.
+
+| Prop                    | Type                                                             | Description                                                                                                                                                                                                                                                     |
+| ----------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`id`**                | <code>number</code>                                              | 32-bit integer id, shared by scheduling, cancel, and the notification shade. Scheduling the same id again replaces the pending notification.                                                                                                                    |
+| **`title`**             | <code>string</code>                                              | Shown as the notification title. Required, 1–200 characters after trimming.                                                                                                                                                                                     |
+| **`body`**              | <code>string</code>                                              | Shown under the title. Required string, may be empty, at most 2000 characters.                                                                                                                                                                                  |
+| **`largeBody`**         | <code>string</code>                                              | Android big-text style. Ignored when `inboxList` is set.                                                                                                                                                                                                        |
+| **`summaryText`**       | <code>string</code>                                              | Android summary line for big-text and inbox styles.                                                                                                                                                                                                             |
+| **`schedule`**          | <code><a href="#schedule">Schedule</a></code>                    |                                                                                                                                                                                                                                                                 |
+| **`sound`**             | <code>string</code>                                              | iOS: a bundle file name, `default` for the system sound, or `''` for silence. Android 8+: ignored. Put the sound on a channel instead. Android 7: a `res/raw` file name, `default`, or `''`.                                                                    |
+| **`smallIcon`**         | <code>string</code>                                              | Android drawable resource name. Overrides the config `smallIcon`.                                                                                                                                                                                               |
+| **`largeIcon`**         | <code>string</code>                                              | Android large icon. Bitmap drawable resource name (`png` or `webp`, not a vector).                                                                                                                                                                              |
+| **`iconColor`**         | <code>string</code>                                              | Android icon tint. `#RGB`, `#RRGGBB`, or `#AARRGGBB`.                                                                                                                                                                                                           |
+| **`attachments`**       | <code>Attachment[]</code>                                        | iOS attachments. See <a href="#attachment">`Attachment`</a>.                                                                                                                                                                                                    |
+| **`actionTypeId`**      | <code>string</code>                                              | Must match a type passed to `registerActionTypes` in this app run (and persisted by the plugin).                                                                                                                                                                |
+| **`extra`**             | <code><a href="#record">Record</a>&lt;string, unknown&gt;</code> | JSON object stored with the notification and returned to JavaScript. Do not put secrets here. It is readable from the delivered notification payload by the app and, on Android, by notification listeners on the device. At most 4096 characters once encoded. |
+| **`threadIdentifier`**  | <code>string</code>                                              | iOS `threadIdentifier`.                                                                                                                                                                                                                                         |
+| **`summaryArgument`**   | <code>string</code>                                              | iOS summary argument. Ignored on iOS 15 and newer.                                                                                                                                                                                                              |
+| **`relevanceScore`**    | <code>number</code>                                              | iOS relevance score from 0 to 1.                                                                                                                                                                                                                                |
+| **`interruptionLevel`** | <code><a href="#interruptionlevel">InterruptionLevel</a></code>  | iOS interruption level. `critical` and `timeSensitive` need Apple entitlements.                                                                                                                                                                                 |
+| **`group`**             | <code>string</code>                                              | Android notification group key.                                                                                                                                                                                                                                 |
+| **`groupSummary`**      | <code>boolean</code>                                             | Android group summary. Requires `group`.                                                                                                                                                                                                                        |
+| **`channelId`**         | <code>string</code>                                              | Android 8+ channel id. The channel must already exist. When omitted, the plugin posts to the `default` channel.                                                                                                                                                 |
+| **`ongoing`**           | <code>boolean</code>                                             | Android: the notification cannot be swiped away. Forces `autoCancel` off.                                                                                                                                                                                       |
+| **`autoCancel`**        | <code>boolean</code>                                             | Android: remove the notification when the user taps it. Defaults to true.                                                                                                                                                                                       |
+| **`inboxList`**         | <code>string[]</code>                                            | Android inbox lines. At most five.                                                                                                                                                                                                                              |
+| **`silent`**            | <code>boolean</code>                                             | iOS: when true, a notification delivered in the foreground is not presented. The `localNotificationReceived` event still fires. Other platforms ignore this.                                                                                                    |
+| **`badge`**             | <code>number</code>                                              | iOS application icon badge. Android launcher badges are not set.                                                                                                                                                                                                |
+
+
+#### Schedule
+
+| Prop                 | Type                                                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| -------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`at`**             | <code>string \| Date</code>         | Fire at this instant. A `Date` or an ISO-8601 string (`2026-11-05T18:00:00.000Z` or an offset form). Must be in the future and within 8 years. On output this plugin returns an ISO-8601 UTC string.                                                                                                                                                                                                                                                                   |
+| **`repeats`**        | <code>boolean</code>                                    | With `at`, repeat forever using the fixed delay between the call and `at`. That delay must be at least 60 seconds. Not valid with `on` or `every`.                                                                                                                                                                                                                                                                                                                                         |
+| **`allowWhileIdle`** | <code>boolean</code>                                    | Android: allow the alarm to fire in Doze maintenance windows. Exact Doze alarms are still limited by the system (roughly one every 9 minutes per app). Other platforms ignore this flag.                                                                                                                                                                                                                                                                                                   |
+| **`on`**             | <code><a href="#scheduleon">ScheduleOn</a></code>       | Fire on the next local time that matches these fields, then repeat. Month is 1–12. <a href="#weekday">Weekday</a> is 1 (Sunday) through 7 (Saturday). Omitted date fields match any value. Omitted `second` means 0. Omitted `minute` means 0 unless only `second` is set, in which case every minute matches. Omitted `hour` means 0 when a date field is set or when no time field is set; when `minute` or `second` is set and no date field is set, omitted `hour` matches every hour. |
+| **`every`**          | <code><a href="#scheduleevery">ScheduleEvery</a></code> | Repeat by a fixed unit. `count` is how many of those units make one interval (every 2 days is `{ every: 'day', count: 2 }`). The first fire is one interval after the call. The interval must be at least 60 seconds. `second`, `minute`, and `hour` are fixed durations. `day`, `week`, `two-weeks`, `month`, and `year` use local calendar addition on Android. On iOS every unit is the fixed duration measured when the notification is scheduled.                                     |
+| **`count`**          | <code>number</code>                                     | Multiplier for `every`. Defaults to 1. Maximum 1000.                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+
+#### ScheduleOn
+
+| Prop          | Type                | Description                                                  |
+| ------------- | ------------------- | ------------------------------------------------------------ |
+| **`year`**    | <code>number</code> | Full year, 1970 through 2100.                                |
+| **`month`**   | <code>number</code> | 1 (January) through 12.                                      |
+| **`day`**     | <code>number</code> | Day of the month, 1 through 31. Impossible dates never fire. |
+| **`weekday`** | <code>number</code> | 1 Sunday through 7 Saturday.                                 |
+| **`hour`**    | <code>number</code> | 0 through 23, device local time.                             |
+| **`minute`**  | <code>number</code> | 0 through 59.                                                |
+| **`second`**  | <code>number</code> | 0 through 59.                                                |
+
+
+#### Attachment
+
+| Prop          | Type                                                            | Description                                                                                                                                                                                     |
+| ------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`id`**      | <code>string</code>                                             |                                                                                                                                                                                                 |
+| **`url`**     | <code>string</code>                                             | iOS only. A bundle file name (`photo.png`) or a `file://` URL inside the app container, bundle, or temp directory. Remote URLs are rejected. Android accepts the field and does not display it. |
+| **`options`** | <code><a href="#attachmentoptions">AttachmentOptions</a></code> |                                                                                                                                                                                                 |
+
+
+#### AttachmentOptions
+
+| Prop                                                             | Type                                                      | Description                                                                                           |
+| ---------------------------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **`iosUNNotificationAttachmentOptionsTypeHintKey`**              | <code>string</code>                                       | iOS `UNNotificationAttachmentOptionsTypeHintKey`. A UTI such as `public.png`.                         |
+| **`iosUNNotificationAttachmentOptionsThumbnailHiddenKey`**       | <code>boolean</code>                                      | iOS `UNNotificationAttachmentOptionsThumbnailHiddenKey`.                                              |
+| **`iosUNNotificationAttachmentOptionsThumbnailClippingRectKey`** | <code><a href="#attachmentrect">AttachmentRect</a></code> | iOS `UNNotificationAttachmentOptionsThumbnailClippingRectKey`, as `{ x, y, width, height }` in 0...1. |
+| **`iosUNNotificationAttachmentOptionsThumbnailTimeKey`**         | <code>number</code>                                       | iOS `UNNotificationAttachmentOptionsThumbnailTimeKey`, in seconds.                                    |
+
+
+#### AttachmentRect
+
+| Prop         | Type                |
+| ------------ | ------------------- |
+| **`x`**      | <code>number</code> |
+| **`y`**      | <code>number</code> |
+| **`width`**  | <code>number</code> |
+| **`height`** | <code>number</code> |
+
+
+#### PendingResult
+
+| Prop                | Type                                          |
+| ------------------- | --------------------------------------------- |
+| **`notifications`** | <code>PendingLocalNotificationSchema[]</code> |
+
+
+#### PendingLocalNotificationSchema
+
+| Prop           | Type                                                             | Description                                                                                                                                |
+| -------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`id`**       | <code>number</code>                                              |                                                                                                                                            |
+| **`title`**    | <code>string</code>                                              |                                                                                                                                            |
+| **`body`**     | <code>string</code>                                              |                                                                                                                                            |
+| **`extra`**    | <code><a href="#record">Record</a>&lt;string, unknown&gt;</code> |                                                                                                                                            |
+| **`schedule`** | <code><a href="#schedule">Schedule</a></code>                    | The schedule that was stored. `at`, when present, is an ISO-8601 UTC string even if a `Date` was passed to `schedule`. |
+
+
+#### CancelOptions
+
+| Prop                | Type                           |
+| ------------------- | ------------------------------ |
+| **`notifications`** | <code>{ id: number; }[]</code> |
+
+
+#### DeliveredNotifications
+
+| Prop                | Type                                       |
+| ------------------- | ------------------------------------------ |
+| **`notifications`** | <code>DeliveredNotificationSchema[]</code> |
+
+
+#### DeliveredNotificationSchema
+
+| Prop               | Type                                                             | Description                                                               |
+| ------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **`id`**           | <code>number</code>                                              |                                                                           |
+| **`title`**        | <code>string</code>                                              |                                                                           |
+| **`body`**         | <code>string</code>                                              |                                                                           |
+| **`tag`**          | <code>string</code>                                              | Android notification tag when one was set. This plugin does not set tags. |
+| **`group`**        | <code>string</code>                                              |                                                                           |
+| **`groupSummary`** | <code>boolean</code>                                             |                                                                           |
+| **`extra`**        | <code><a href="#record">Record</a>&lt;string, unknown&gt;</code> |                                                                           |
+| **`actionTypeId`** | <code>string</code>                                              |                                                                           |
+| **`schedule`**     | <code><a href="#schedule">Schedule</a></code>                    |                                                                           |
+| **`attachments`**  | <code>Attachment[]</code>                                        |                                                                           |
+
+
+#### RegisterActionTypesOptions
+
+| Prop        | Type                      |
+| ----------- | ------------------------- |
+| **`types`** | <code>ActionType[]</code> |
+
+
+#### ActionType
+
+| Prop                                   | Type                  | Description                                                                                  |
+| -------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------- |
+| **`id`**                               | <code>string</code>   | Referenced by <a href="#localnotificationschema">`LocalNotificationSchema.actionTypeId`</a>. |
+| **`actions`**                          | <code>Action[]</code> | At most three actions. Android cannot show more than three buttons.                          |
+| **`iosHiddenPreviewsBodyPlaceholder`** | <code>string</code>   | iOS `hiddenPreviewsBodyPlaceholder`.                                                         |
+| **`iosCustomDismissAction`**           | <code>boolean</code>  | iOS category option. Combined with the other iOS flags.                                      |
+| **`iosAllowInCarPlay`**                | <code>boolean</code>  | iOS category option.                                                                         |
+| **`iosHiddenPreviewsShowTitle`**       | <code>boolean</code>  | iOS category option.                                                                         |
+| **`iosHiddenPreviewsShowSubtitle`**    | <code>boolean</code>  | iOS category option.                                                                         |
+
+
+#### Action
+
+| Prop                         | Type                 | Description                                                                                                                                                                                                                                                        |
+| ---------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`id`**                     | <code>string</code>  | Reported as `actionId`. `tap` and `dismiss` are reserved.                                                                                                                                                                                                          |
+| **`title`**                  | <code>string</code>  |                                                                                                                                                                                                                                                                    |
+| **`requiresAuthentication`** | <code>boolean</code> | iOS only. Requires the device to be unlocked.                                                                                                                                                                                                                      |
+| **`foreground`**             | <code>boolean</code> | iOS brings the app forward when true and can deliver a background action when false. Android action buttons always open the app. A broadcast trampoline cannot reliably start the activity on Android 12 or newer, so the button's pending intent is the activity. |
+| **`destructive`**            | <code>boolean</code> | iOS destructive style. Android has no equivalent and ignores this flag.                                                                                                                                                                                            |
+| **`input`**                  | <code>boolean</code> | Text input. iOS uses a text action; Android uses `RemoteInput`.                                                                                                                                                                                                    |
+| **`inputButtonTitle`**       | <code>string</code>  | iOS text-input button title.                                                                                                                                                                                                                                       |
+| **`inputPlaceholder`**       | <code>string</code>  | iOS text-input placeholder.                                                                                                                                                                                                                                        |
+
+
+#### Channel
+
+| Prop              | Type                                              | Description                                                                                                                      |
+| ----------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **`id`**          | <code>string</code>                               |                                                                                                                                  |
+| **`name`**        | <code>string</code>                               |                                                                                                                                  |
+| **`description`** | <code>string</code>                               |                                                                                                                                  |
+| **`sound`**       | <code>string</code>                               | `res/raw` file name, `''` for a silent channel, or omit for the system default. The resource must exist when a file name is set. |
+| **`importance`**  | <code><a href="#importance">Importance</a></code> | Android importance 0 (none) through 5 (max). Defaults to 3. Values below 3 do not play a sound.                                  |
+| **`visibility`**  | <code><a href="#visibility">Visibility</a></code> | Lock-screen visibility. `-1` secret, `0` private, `1` public. Defaults to 1.                                                     |
+| **`lights`**      | <code>boolean</code>                              | Defaults to false.                                                                                                               |
+| **`lightColor`**  | <code>string</code>                               | `#RRGGBB` or `#AARRGGBB` when `lights` is true.                                                                                  |
+| **`vibration`**   | <code>boolean</code>                              | Defaults to true when importance is 3 or higher, otherwise false.                                                                |
+
+
+#### ListChannelsResult
+
+| Prop           | Type                   | Description                                                                                             |
+| -------------- | ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| **`channels`** | <code>Channel[]</code> | On Android, `sound` may be a resource URI rather than the file name that was passed to `createChannel`. |
+
+
+#### PluginListenerHandle
+
+| Prop         | Type                                      |
+| ------------ | ----------------------------------------- |
+| **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
+
+
+#### ActionPerformed
+
+| Prop               | Type                                                                        | Description                                                            |
+| ------------------ | --------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| **`actionId`**     | <code>string</code>                                                         |                                                                        |
+| **`inputValue`**   | <code>string</code>                                                         | Present when the action has `input: true` and the user submitted text. |
+| **`notification`** | <code><a href="#localnotificationschema">LocalNotificationSchema</a></code> |                                                                        |
+
+
+### Type Aliases
+
+
+#### PermissionState
+
+<code>'prompt' | 'prompt-with-rationale' | 'granted' | 'denied'</code>
+
+
+#### ScheduleEvery
+
+<code>'year' | 'month' | 'two-weeks' | 'week' | 'day' | 'hour' | 'minute' | 'second'</code>
+
+
+#### Record
+
+Construct a type with a set of properties K of type T
+
+<code>{
+ [P in K]: T;
+ }</code>
+
+
+#### InterruptionLevel
+
+iOS interruption level.
+`critical` requires the Critical Alerts entitlement.
+`timeSensitive` requires the Time Sensitive Notifications capability and can
+still be blocked by a Focus mode.
+
+<code>'active' | 'critical' | 'passive' | 'timeSensitive'</code>
+
+
+#### Importance
+
+Android `NotificationManager` importance.
+
+<code>0 | 1 | 2 | 3 | 4 | 5</code>
+
+
+#### Visibility
+
+Android notification visibility.
+
+<code>-1 | 0 | 1</code>
+
+
+### Enums
+
+
+#### Weekday
+
+| Members         | Value          |
+| --------------- | -------------- |
+| **`Sunday`**    | <code>1</code> |
+| **`Monday`**    | <code>2</code> |
+| **`Tuesday`**   | <code>3</code> |
+| **`Wednesday`** | <code>4</code> |
+| **`Thursday`**  | <code>5</code> |
+| **`Friday`**    | <code>6</code> |
+| **`Saturday`**  | <code>7</code> |
+
+</docgen-api>
 
 ## Scheduling
 
