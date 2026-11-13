@@ -1,6 +1,4 @@
 import type {
-  Attachment,
-  AttachmentRect,
   InterruptionLevel,
   LocalNotificationSchema,
   Schedule,
@@ -29,7 +27,6 @@ const EVERY_UNITS: readonly ScheduleEvery[] = [
 
 const INTERRUPTION_LEVELS: readonly InterruptionLevel[] = ['active', 'critical', 'passive', 'timeSensitive'];
 
-const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const RESOURCE_PATTERN = /^[a-z0-9_]{1,100}$/;
 const SOUND_FILE_PATTERN = /^[A-Za-z0-9_-]{1,100}\.[A-Za-z0-9]{1,8}$/;
 const GROUP_PATTERN = /^[A-Za-z0-9_.-]{1,128}$/;
@@ -72,7 +69,6 @@ export interface ValidatedNotification {
   smallIcon?: string;
   largeIcon?: string;
   iconColor?: string;
-  attachments: Attachment[];
   extra?: Record<string, unknown>;
   threadIdentifier?: string;
   summaryArgument?: string;
@@ -137,7 +133,6 @@ export function parseNotification(value: unknown, now: number, index = 0): Valid
     smallIcon: optionalToken(value.smallIcon, RESOURCE_PATTERN, 'smallIcon'),
     largeIcon: optionalToken(value.largeIcon, RESOURCE_PATTERN, 'largeIcon'),
     iconColor: optionalColor(value.iconColor, 'iconColor'),
-    attachments: parseAttachments(value.attachments),
     extra: parseExtra(value.extra),
     threadIdentifier: optionalToken(value.threadIdentifier, GROUP_PATTERN, 'threadIdentifier'),
     summaryArgument: optionalText(value.summaryArgument, 200, 'summaryArgument'),
@@ -377,7 +372,6 @@ export function toPublicNotification(notification: ValidatedNotification): Local
     smallIcon: notification.smallIcon,
     largeIcon: notification.largeIcon,
     iconColor: notification.iconColor,
-    attachments: notification.attachments.length > 0 ? notification.attachments : undefined,
     extra: notification.extra,
     threadIdentifier: notification.threadIdentifier,
     summaryArgument: notification.summaryArgument,
@@ -525,83 +519,6 @@ function dateFieldsMatch(ms: number, match: CalendarMatch): boolean {
   if (match.day != null && date.getDate() !== match.day) return false;
   if (match.weekday != null && date.getDay() + 1 !== match.weekday) return false;
   return true;
-}
-
-function parseAttachments(value: unknown): Attachment[] {
-  if (value == null) return [];
-  if (!Array.isArray(value)) {
-    throw new LocalNotificationsError('INVALID_NOTIFICATION', 'attachments must be an array.');
-  }
-  if (value.length > 4) {
-    throw new LocalNotificationsError('INVALID_NOTIFICATION', 'At most 4 attachments are supported.');
-  }
-  return value.map((entry) => {
-    if (!isPlainObject(entry)) {
-      throw new LocalNotificationsError('INVALID_NOTIFICATION', 'Each attachment must be an object.');
-    }
-    const id = requireToken(entry.id, ID_PATTERN, 'attachment id');
-    if (typeof entry.url !== 'string' || !isSafeAttachmentUrl(entry.url)) {
-      throw new LocalNotificationsError(
-        'INVALID_NOTIFICATION',
-        'Attachment url must be a bundle file name or a file:// URL. Remote URLs are not supported.',
-      );
-    }
-    return { id, url: entry.url, options: parseAttachmentOptions(entry.options) };
-  });
-}
-
-function isSafeAttachmentUrl(url: string): boolean {
-  if (url.length > 1024 || url.includes('\\') || url.includes('\0')) return false;
-  if (SOUND_FILE_PATTERN.test(url)) return true;
-  if (url.startsWith('file://')) {
-    try {
-      const parsed = new URL(url);
-      return parsed.protocol === 'file:' && !parsed.hostname.includes('..');
-    } catch {
-      return false;
-    }
-  }
-  if (url.startsWith('/') && !url.startsWith('//')) {
-    return !url.split('/').includes('..');
-  }
-  return false;
-}
-
-function parseAttachmentOptions(value: unknown): Attachment['options'] {
-  if (value == null) return undefined;
-  if (!isPlainObject(value)) {
-    throw new LocalNotificationsError('INVALID_NOTIFICATION', 'Attachment options must be an object.');
-  }
-  const rect = value.iosUNNotificationAttachmentOptionsThumbnailClippingRectKey;
-  return {
-    iosUNNotificationAttachmentOptionsTypeHintKey: optionalToken(
-      value.iosUNNotificationAttachmentOptionsTypeHintKey,
-      /^[A-Za-z0-9.-]{1,80}$/,
-      'iosUNNotificationAttachmentOptionsTypeHintKey',
-    ),
-    iosUNNotificationAttachmentOptionsThumbnailHiddenKey: optionalBool(
-      value.iosUNNotificationAttachmentOptionsThumbnailHiddenKey,
-      false,
-      'iosUNNotificationAttachmentOptionsThumbnailHiddenKey',
-    ),
-    iosUNNotificationAttachmentOptionsThumbnailClippingRectKey: rect === undefined ? undefined : parseRect(rect),
-    iosUNNotificationAttachmentOptionsThumbnailTimeKey:
-      value.iosUNNotificationAttachmentOptionsThumbnailTimeKey === undefined
-        ? undefined
-        : requireFinite(value.iosUNNotificationAttachmentOptionsThumbnailTimeKey, 0, 86_400, 'thumbnail time'),
-  };
-}
-
-function parseRect(value: unknown): AttachmentRect {
-  if (!isPlainObject(value)) {
-    throw new LocalNotificationsError('INVALID_NOTIFICATION', 'Thumbnail clipping rect must be an object.');
-  }
-  return {
-    x: requireFinite(value.x, 0, 1, 'rect.x'),
-    y: requireFinite(value.y, 0, 1, 'rect.y'),
-    width: requireFinite(value.width, 0, 1, 'rect.width'),
-    height: requireFinite(value.height, 0, 1, 'rect.height'),
-  };
 }
 
 function parseInbox(value: unknown): string[] | undefined {

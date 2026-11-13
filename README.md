@@ -294,7 +294,6 @@ Platform-specific fields are ignored where the platform cannot apply them.
 | **`smallIcon`**         | <code>string</code>                                              | Android drawable resource name. Overrides the config `smallIcon`.                                                                                                                                                                                               |
 | **`largeIcon`**         | <code>string</code>                                              | Android large icon. Bitmap drawable resource name (`png` or `webp`, not a vector).                                                                                                                                                                              |
 | **`iconColor`**         | <code>string</code>                                              | Android icon tint. `#RGB`, `#RRGGBB`, or `#AARRGGBB`.                                                                                                                                                                                                           |
-| **`attachments`**       | <code>Attachment[]</code>                                        | iOS attachments. See <a href="#attachment">`Attachment`</a>.                                                                                                                                                                                                    |
 | **`extra`**             | <code><a href="#record">Record</a>&lt;string, unknown&gt;</code> | JSON object stored with the notification and returned to JavaScript. Do not put secrets here. It is readable from the delivered notification payload by the app and, on Android, by notification listeners on the device. At most 4096 characters once encoded. |
 | **`threadIdentifier`**  | <code>string</code>                                              | iOS `threadIdentifier`.                                                                                                                                                                                                                                         |
 | **`summaryArgument`**   | <code>string</code>                                              | iOS summary argument. Ignored on iOS 15 and newer.                                                                                                                                                                                                              |
@@ -331,35 +330,6 @@ Platform-specific fields are ignored where the platform cannot apply them.
 | **`hour`**    | <code>number</code> | 0 through 23, device local time.                             |
 | **`minute`**  | <code>number</code> | 0 through 59.                                                |
 | **`second`**  | <code>number</code> | 0 through 59.                                                |
-
-
-#### Attachment
-
-| Prop          | Type                                                            | Description                                                                                                                                                                                     |
-| ------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`id`**      | <code>string</code>                                             |                                                                                                                                                                                                 |
-| **`url`**     | <code>string</code>                                             | iOS only. A bundle file name (`photo.png`) or a `file://` URL inside the app container, bundle, or temp directory. Remote URLs are rejected. Android accepts the field and does not display it. |
-| **`options`** | <code><a href="#attachmentoptions">AttachmentOptions</a></code> |                                                                                                                                                                                                 |
-
-
-#### AttachmentOptions
-
-| Prop                                                             | Type                                                      | Description                                                                                           |
-| ---------------------------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **`iosUNNotificationAttachmentOptionsTypeHintKey`**              | <code>string</code>                                       | iOS `UNNotificationAttachmentOptionsTypeHintKey`. A UTI such as `public.png`.                         |
-| **`iosUNNotificationAttachmentOptionsThumbnailHiddenKey`**       | <code>boolean</code>                                      | iOS `UNNotificationAttachmentOptionsThumbnailHiddenKey`.                                              |
-| **`iosUNNotificationAttachmentOptionsThumbnailClippingRectKey`** | <code><a href="#attachmentrect">AttachmentRect</a></code> | iOS `UNNotificationAttachmentOptionsThumbnailClippingRectKey`, as `{ x, y, width, height }` in 0...1. |
-| **`iosUNNotificationAttachmentOptionsThumbnailTimeKey`**         | <code>number</code>                                       | iOS `UNNotificationAttachmentOptionsThumbnailTimeKey`, in seconds.                                    |
-
-
-#### AttachmentRect
-
-| Prop         | Type                |
-| ------------ | ------------------- |
-| **`x`**      | <code>number</code> |
-| **`y`**      | <code>number</code> |
-| **`width`**  | <code>number</code> |
-| **`height`** | <code>number</code> |
 
 
 #### PendingResult
@@ -406,7 +376,6 @@ Platform-specific fields are ignored where the platform cannot apply them.
 | **`groupSummary`** | <code>boolean</code>                                             |                                                                           |
 | **`extra`**        | <code><a href="#record">Record</a>&lt;string, unknown&gt;</code> |                                                                           |
 | **`schedule`**     | <code><a href="#schedule">Schedule</a></code>                    |                                                                           |
-| **`attachments`**  | <code>Attachment[]</code>                                        |                                                                           |
 
 
 #### PluginListenerHandle
@@ -538,6 +507,7 @@ The method names and most fields match that plugin so existing calls are recogni
 - `getDeliveredNotifications()` is not included. `removeDeliveredNotifications()` and `removeAllDeliveredNotifications()` still remove notifications this plugin posted.
 - `removeAllDeliveredNotifications()` is limited to notifications this plugin posted.
 - `registerActionTypes()`, `actionTypeId`, and notification action buttons are not included. `localNotificationActionPerformed` still reports `tap` and `dismiss`.
+- `attachments` are not included.
 - `createChannel()`, `deleteChannel()`, `listChannels()`, and `channelId` are not included.
 - Per-notification `sound` is ignored on Android 8+. Set `sound` in the plugin config, or the system default is used.
 - `areEnabled()` is not included. Use `checkPermissions()` and treat `display === 'granted'` as enabled.

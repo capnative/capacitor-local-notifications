@@ -119,41 +119,11 @@ export interface DeliveredNotificationSchema {
   groupSummary?: boolean;
   extra?: Record<string, unknown>;
   schedule?: Schedule;
-  attachments?: Attachment[];
 }
 
 export interface ActionPerformed {
   actionId: string;
   notification: LocalNotificationSchema;
-}
-
-export interface Attachment {
-  id: string;
-  /**
-   * iOS only. A bundle file name (`photo.png`) or a `file://` URL inside the
-   * app container, bundle, or temp directory. Remote URLs are rejected.
-   * Android accepts the field and does not display it.
-   */
-  url: string;
-  options?: AttachmentOptions;
-}
-
-export interface AttachmentOptions {
-  /** iOS `UNNotificationAttachmentOptionsTypeHintKey`. A UTI such as `public.png`. */
-  iosUNNotificationAttachmentOptionsTypeHintKey?: string;
-  /** iOS `UNNotificationAttachmentOptionsThumbnailHiddenKey`. */
-  iosUNNotificationAttachmentOptionsThumbnailHiddenKey?: boolean;
-  /** iOS `UNNotificationAttachmentOptionsThumbnailClippingRectKey`, as `{ x, y, width, height }` in 0...1. */
-  iosUNNotificationAttachmentOptionsThumbnailClippingRectKey?: AttachmentRect;
-  /** iOS `UNNotificationAttachmentOptionsThumbnailTimeKey`, in seconds. */
-  iosUNNotificationAttachmentOptionsThumbnailTimeKey?: number;
-}
-
-export interface AttachmentRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
 }
 
 /**
@@ -187,8 +157,6 @@ export interface LocalNotificationSchema {
   largeIcon?: string;
   /** Android icon tint. `#RGB`, `#RRGGBB`, or `#AARRGGBB`. */
   iconColor?: string;
-  /** iOS attachments. See `Attachment`. */
-  attachments?: Attachment[];
   /**
    * JSON object stored with the notification and returned to JavaScript.
    * Do not put secrets here. It is readable from the delivered notification

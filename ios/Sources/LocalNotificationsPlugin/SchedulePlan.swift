@@ -76,7 +76,6 @@ public struct ValidatedNotification: Equatable {
     public var interruptionLevel: String?
     public var badge: Int?
     public var silent: Bool
-    public var attachments: [(id: String, url: String)]
     public var allowWhileIdle: Bool
     public var schedule: ScheduleEcho?
     public var plan: FirePlan
@@ -127,7 +126,6 @@ public enum SchedulePlan {
             interruptionLevel: try optionalLevel(value["interruptionLevel"]),
             badge: value["badge"] == nil ? nil : try requireInt(value["badge"], 0, 999_999, "badge", "INVALID_NOTIFICATION"),
             silent: try optionalBool(value["silent"], false, "silent", "INVALID_NOTIFICATION"),
-            attachments: try parseAttachmentRefs(value["attachments"]),
             allowWhileIdle: scheduled.allowWhileIdle,
             schedule: scheduled.echo,
             plan: scheduled.plan
@@ -462,34 +460,6 @@ public enum SchedulePlan {
         let fraction = value[value.index(after: dot)..<zoneIndex]
         let padded = fraction.padding(toLength: 3, withPad: "0", startingAt: 0)
         return String(value[..<dot]) + "." + padded + value[zoneIndex...]
-    }
-
-    private static func parseAttachmentRefs(_ value: Any?) throws -> [(id: String, url: String)] {
-        if value == nil { return [] }
-        guard let list = value as? [Any] else {
-            throw NotificationFailure(code: "INVALID_NOTIFICATION", message: "attachments must be an array.")
-        }
-        if list.count > 4 {
-            throw NotificationFailure(code: "INVALID_NOTIFICATION", message: "At most 4 attachments are supported.")
-        }
-        return try list.map { entry in
-            guard let map = entry as? [String: Any] else {
-                throw NotificationFailure(code: "INVALID_NOTIFICATION", message: "Each attachment must be an object.")
-            }
-            let id = try requireToken(map["id"], "^[A-Za-z0-9_-]{1,64}$", "attachment id", "INVALID_NOTIFICATION")
-            guard let url = map["url"] as? String, isSafeAttachment(url) else {
-                throw NotificationFailure(code: "INVALID_NOTIFICATION", message: "Attachment url must be a bundle file name or a file:// URL. Remote URLs are not supported.")
-            }
-            return (id, url)
-        }
-    }
-
-    private static func isSafeAttachment(_ url: String) -> Bool {
-        if url.count > 1024 || url.contains("\\") || url.contains("\0") { return false }
-        if url.range(of: #"^[A-Za-z0-9_-]{1,100}\.[A-Za-z0-9]{1,8}$"#, options: .regularExpression) != nil { return true }
-        if url.hasPrefix("file://") { return URL(string: url)?.isFileURL == true }
-        if url.hasPrefix("/") && !url.hasPrefix("//") { return !url.split(separator: "/").contains("..") }
-        return false
     }
 
     private static func parseExtra(_ value: Any?) throws -> String? {

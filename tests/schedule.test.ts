@@ -157,17 +157,6 @@ describe('parseNotifications', () => {
       ),
     ).toBe('INVALID_SCHEDULE');
   });
-
-  it('rejects unsafe attachment URLs and accepts a bundle file name', () => {
-    expect(codeOf(() => one({ id: 1, title: 'A', body: 'B', attachments: [{ id: 'a', url: 'https://evil.test/a.png' }] }))).toBe(
-      'INVALID_NOTIFICATION',
-    );
-    expect(codeOf(() => one({ id: 1, title: 'A', body: 'B', attachments: [{ id: 'a', url: '/tmp/../../etc/passwd' }] }))).toBe(
-      'INVALID_NOTIFICATION',
-    );
-    const notification = one({ id: 1, title: 'A', body: 'B', attachments: [{ id: 'pic', url: 'photo.png' }] });
-    expect(notification?.attachments).toEqual([{ id: 'pic', url: 'photo.png', options: undefined }]);
-  });
 });
 
 describe('nextCalendarOccurrence', () => {

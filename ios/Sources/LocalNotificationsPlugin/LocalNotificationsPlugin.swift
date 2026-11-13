@@ -219,9 +219,6 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
                 content.sound = UNNotificationSound(named: UNNotificationSoundName(sound))
             }
         }
-        if !notification.attachments.isEmpty {
-            content.attachments = try notification.attachments.map { try makeAttachment($0.id, $0.url) }
-        }
         var info: [AnyHashable: Any] = ["capnative": true, "silent": notification.silent]
         if let extra = notification.extraJSON { info["extra"] = extra }
         if let schedule = notification.schedule, let encoded = scheduleJSON(schedule) { info["schedule"] = encoded }
@@ -243,41 +240,6 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
         case .calendar(let match, _):
             return UNCalendarNotificationTrigger(dateMatching: SchedulePlan.dateComponents(for: match, calendar: .current), repeats: true)
         }
-    }
-
-    private func makeAttachment(_ id: String, _ urlString: String) throws -> UNNotificationAttachment {
-        let url = try resolveAttachment(urlString)
-        return try UNNotificationAttachment(identifier: id, url: url, options: nil)
-    }
-
-    private func resolveAttachment(_ urlString: String) throws -> URL {
-        if !urlString.contains("/") && !urlString.contains(":") {
-            let name = urlString as NSString
-            guard let url = Bundle.main.url(forResource: name.deletingPathExtension, withExtension: name.pathExtension) else {
-                throw NotificationFailure(code: "INVALID_NOTIFICATION", message: "Attachment \(urlString) was not found in the app bundle.")
-            }
-            return url
-        }
-        let url: URL
-        if urlString.hasPrefix("file://") {
-            guard let parsed = URL(string: urlString) else {
-                throw NotificationFailure(code: "INVALID_NOTIFICATION", message: "Attachment url is not a file URL.")
-            }
-            url = parsed
-        } else {
-            url = URL(fileURLWithPath: urlString)
-        }
-        let standardized = url.standardizedFileURL
-        let path = standardized.path
-        let roots = [NSHomeDirectory(), Bundle.main.bundlePath, NSTemporaryDirectory()]
-        let allowed = roots.contains { root in
-            let prefix = root.hasSuffix("/") ? root : root + "/"
-            return path == root || path.hasPrefix(prefix)
-        }
-        guard allowed, FileManager.default.isReadableFile(atPath: path) else {
-            throw NotificationFailure(code: "INVALID_NOTIFICATION", message: "Attachment path is outside the app sandbox or cannot be read.")
-        }
-        return standardized
     }
 
     private func bundleSound(_ name: String) -> URL? {
