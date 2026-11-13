@@ -31,6 +31,12 @@ export interface LocalNotificationsPlugin {
    */
   cancel(options: CancelOptions): Promise<void>;
 
+  /**
+   * Cancel every pending notification scheduled by this plugin.
+   * Delivered notifications are left in place.
+   */
+  cancelAll(): Promise<void>;
+
   /** Remove specific delivered notifications posted by this plugin. */
   removeDeliveredNotifications(delivered: DeliveredNotifications): Promise<void>;
 

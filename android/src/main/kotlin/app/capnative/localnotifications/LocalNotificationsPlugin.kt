@@ -148,6 +148,18 @@ class LocalNotificationsPlugin : Plugin() {
     }
 
     @PluginMethod
+    fun cancelAll(call: PluginCall) {
+        val store = NotificationStore(context)
+        val scheduler = AlarmScheduler(context)
+        val pending = store.all()
+        store.clear()
+        for (notification in pending) {
+            scheduler.cancel(notification.id)
+        }
+        call.resolve()
+    }
+
+    @PluginMethod
     fun removeDeliveredNotifications(call: PluginCall) {
         try {
             val data = NotificationParser.asMap(call.data)
@@ -165,15 +177,17 @@ class LocalNotificationsPlugin : Plugin() {
 
     @PluginMethod
     fun removeAllDeliveredNotifications(call: PluginCall) {
-        val manager = context.getSystemService(NotificationManager::class.java)
-        if (manager != null) {
-            for (active in manager.activeNotifications) {
-                if (active.notification.extras.getString(Extras.MARKER) == Extras.MARKER_VALUE) {
-                    manager.cancel(active.tag, active.id)
-                }
+        cancelPostedNotifications()
+        call.resolve()
+    }
+
+    private fun cancelPostedNotifications() {
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        for (active in manager.activeNotifications) {
+            if (active.notification.extras.getString(Extras.MARKER) == Extras.MARKER_VALUE) {
+                manager.cancel(active.tag, active.id)
             }
         }
-        call.resolve()
     }
 
     private fun displayState(): String {

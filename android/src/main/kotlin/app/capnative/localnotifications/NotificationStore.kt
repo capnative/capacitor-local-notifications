@@ -19,6 +19,10 @@ internal class NotificationStore(context: Context) {
         writeNotifications(readNotifications().filterNot { it.id == id })
     }
 
+    fun clear() = synchronized(LOCK) {
+        preferences.edit().remove(NOTIFICATIONS).commit()
+    }
+
     private fun readNotifications(): List<StoredNotification> {
         val raw = preferences.getString(NOTIFICATIONS, null) ?: return emptyList()
         return try {

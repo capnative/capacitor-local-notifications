@@ -68,6 +68,7 @@ await LocalNotifications.addListener('localNotificationActionPerformed', (action
 * [`schedule(...)`](#schedule)
 * [`getPending()`](#getpending)
 * [`cancel(...)`](#cancel)
+* [`cancelAll()`](#cancelall)
 * [`removeDeliveredNotifications(...)`](#removedeliverednotifications)
 * [`removeAllDeliveredNotifications()`](#removealldeliverednotifications)
 * [`addListener('localNotificationReceived', ...)`](#addlistenerlocalnotificationreceived-)
@@ -156,6 +157,18 @@ same ids. Unknown ids are ignored.
 | Param         | Type                                                    |
 | ------------- | ------------------------------------------------------- |
 | **`options`** | <code><a href="#canceloptions">CancelOptions</a></code> |
+
+--------------------
+
+
+### cancelAll()
+
+```typescript
+cancelAll() => Promise<void>
+```
+
+Cancel every pending notification scheduled by this plugin.
+Delivered notifications are left in place.
 
 --------------------
 

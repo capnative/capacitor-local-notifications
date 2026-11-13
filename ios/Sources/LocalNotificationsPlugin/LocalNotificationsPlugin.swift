@@ -10,6 +10,7 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "schedule", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getPending", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "cancel", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "cancelAll", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "removeDeliveredNotifications", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "removeAllDeliveredNotifications", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "checkPermissions", returnType: CAPPluginReturnPromise),
@@ -116,6 +117,17 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
             call.reject(error.message, error.code)
         } catch {
             call.reject("The notifications could not be cancelled.", "INVALID_NOTIFICATION")
+        }
+    }
+
+    @objc func cancelAll(_ call: CAPPluginCall) {
+        center.getPendingNotificationRequests { [weak self] requests in
+            let ids = requests.compactMap { request -> String? in
+                guard let self, self.handlerIsOurs(request) else { return nil }
+                return request.identifier
+            }
+            self?.center.removePendingNotificationRequests(withIdentifiers: ids)
+            call.resolve()
         }
     }
 
