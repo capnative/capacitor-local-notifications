@@ -258,23 +258,23 @@ Remove all listeners registered by this plugin.
 
 #### PermissionStatus
 
-| Prop          | Type                                                        | Description                                                                 |
-| ------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------- |
-| **`display`** | <code><a href="#permissionstate">PermissionState</a></code> | `prompt` when the user has not been asked, otherwise `granted` or `denied`. |
+| Prop          | Type                                                        | Platform      | Description                                                                 |
+| ------------- | ----------------------------------------------------------- | ------------- | --------------------------------------------------------------------------- |
+| **`display`** | <code><a href="#permissionstate">PermissionState</a></code> | iOS, Android  | `prompt` when the user has not been asked, otherwise `granted` or `denied`. |
 
 
 #### ScheduleResult
 
-| Prop                | Type                           |
-| ------------------- | ------------------------------ |
-| **`notifications`** | <code>{ id: number; }[]</code> |
+| Prop                | Type                           | Platform     |
+| ------------------- | ------------------------------ | ------------ |
+| **`notifications`** | <code>{ id: number; }[]</code> | iOS, Android |
 
 
 #### ScheduleOptions
 
-| Prop                | Type                                   |
-| ------------------- | -------------------------------------- |
-| **`notifications`** | <code>LocalNotificationSchema[]</code> |
+| Prop                | Type                                   | Platform     |
+| ------------------- | -------------------------------------- | ------------ |
+| **`notifications`** | <code>LocalNotificationSchema[]</code> | iOS, Android |
 
 
 #### LocalNotificationSchema
@@ -282,112 +282,112 @@ Remove all listeners registered by this plugin.
 A local notification.
 Platform-specific fields are ignored where the platform cannot apply them.
 
-| Prop                    | Type                                                             | Description                                                                                                                                                                                                                                                     |
-| ----------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`id`**                | <code>number</code>                                              | 32-bit integer id, shared by scheduling, cancel, and the notification shade. Scheduling the same id again replaces the pending notification.                                                                                                                    |
-| **`title`**             | <code>string</code>                                              | Shown as the notification title. Required, 1–200 characters after trimming.                                                                                                                                                                                     |
-| **`body`**              | <code>string</code>                                              | Shown under the title. Required string, may be empty, at most 2000 characters.                                                                                                                                                                                  |
-| **`largeBody`**         | <code>string</code>                                              | Android big-text style. Ignored when `inboxList` is set.                                                                                                                                                                                                        |
-| **`summaryText`**       | <code>string</code>                                              | Android summary line for big-text and inbox styles.                                                                                                                                                                                                             |
-| **`schedule`**          | <code><a href="#schedule">Schedule</a></code>                    |                                                                                                                                                                                                                                                                 |
-| **`sound`**             | <code>string</code>                                              | iOS: a bundle file name, `default` for the system sound, or `''` for silence. Android 7: a `res/raw` file name, `default`, or `''`. Android 8+: ignored. The plugin config `sound` is used, or the system default. |
-| **`smallIcon`**         | <code>string</code>                                              | Android drawable resource name. Overrides the config `smallIcon`.                                                                                                                                                                                               |
-| **`largeIcon`**         | <code>string</code>                                              | Android large icon. Bitmap drawable resource name (`png` or `webp`, not a vector).                                                                                                                                                                              |
-| **`iconColor`**         | <code>string</code>                                              | Android icon tint. `#RGB`, `#RRGGBB`, or `#AARRGGBB`.                                                                                                                                                                                                           |
-| **`extra`**             | <code><a href="#record">Record</a>&lt;string, unknown&gt;</code> | JSON object stored with the notification and returned to JavaScript. Do not put secrets here. It is readable from the delivered notification payload by the app and, on Android, by notification listeners on the device. At most 4096 characters once encoded. |
-| **`threadIdentifier`**  | <code>string</code>                                              | iOS `threadIdentifier`.                                                                                                                                                                                                                                         |
-| **`summaryArgument`**   | <code>string</code>                                              | iOS summary argument. Ignored on iOS 15 and newer.                                                                                                                                                                                                              |
-| **`relevanceScore`**    | <code>number</code>                                              | iOS relevance score from 0 to 1.                                                                                                                                                                                                                                |
-| **`interruptionLevel`** | <code><a href="#interruptionlevel">InterruptionLevel</a></code>  | iOS interruption level. `critical` and `timeSensitive` need Apple entitlements.                                                                                                                                                                                 |
-| **`group`**             | <code>string</code>                                              | Android notification group key.                                                                                                                                                                                                                                 |
-| **`groupSummary`**      | <code>boolean</code>                                             | Android group summary. Requires `group`.                                                                                                                                                                                                                        |
-| **`ongoing`**           | <code>boolean</code>                                             | Android: the notification cannot be swiped away. Forces `autoCancel` off.                                                                                                                                                                                       |
-| **`autoCancel`**        | <code>boolean</code>                                             | Android: remove the notification when the user taps it. Defaults to true.                                                                                                                                                                                       |
-| **`inboxList`**         | <code>string[]</code>                                            | Android inbox lines. At most five.                                                                                                                                                                                                                              |
-| **`silent`**            | <code>boolean</code>                                             | iOS: when true, a notification delivered in the foreground is not presented. The `localNotificationReceived` event still fires. Other platforms ignore this.                                                                                                    |
-| **`badge`**             | <code>number</code>                                              | iOS application icon badge. Android launcher badges are not set.                                                                                                                                                                                                |
+| Prop                    | Type                                                             | Platform     | Description                                                                                                                                                                                                                                                     |
+| ----------------------- | ---------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`id`**                | <code>number</code>                                              | iOS, Android | 32-bit integer id, shared by scheduling, cancel, and the notification shade. Scheduling the same id again replaces the pending notification.                                                                                                                    |
+| **`title`**             | <code>string</code>                                              | iOS, Android | Shown as the notification title. Required, 1–200 characters after trimming.                                                                                                                                                                                     |
+| **`body`**              | <code>string</code>                                              | iOS, Android | Shown under the title. Required string, may be empty, at most 2000 characters.                                                                                                                                                                                  |
+| **`largeBody`**         | <code>string</code>                                              | Android      | Big-text style. Ignored when `inboxList` is set.                                                                                                                                                                                                                |
+| **`summaryText`**       | <code>string</code>                                              | Android      | Summary line for big-text and inbox styles.                                                                                                                                                                                                                     |
+| **`schedule`**          | <code><a href="#schedule">Schedule</a></code>                    | iOS, Android |                                                                                                                                                                                                                                                                 |
+| **`sound`**             | <code>string</code>                                              | iOS, Android | iOS: a bundle file name, `default` for the system sound, or `''` for silence. Android 7: a `res/raw` file name, `default`, or `''`. Android 8+: ignored. The plugin config `sound` is used, or the system default.                                               |
+| **`smallIcon`**         | <code>string</code>                                              | Android      | Drawable resource name. Overrides the config `smallIcon`.                                                                                                                                                                                                       |
+| **`largeIcon`**         | <code>string</code>                                              | Android      | Large icon. Bitmap drawable resource name (`png` or `webp`, not a vector).                                                                                                                                                                                      |
+| **`iconColor`**         | <code>string</code>                                              | Android      | Icon tint. `#RGB`, `#RRGGBB`, or `#AARRGGBB`.                                                                                                                                                                                                                   |
+| **`extra`**             | <code><a href="#record">Record</a>&lt;string, unknown&gt;</code> | iOS, Android | JSON object stored with the notification and returned to JavaScript. Do not put secrets here. It is readable from the delivered notification payload by the app and, on Android, by notification listeners on the device. At most 4096 characters once encoded. |
+| **`threadIdentifier`**  | <code>string</code>                                              | iOS          | `threadIdentifier`.                                                                                                                                                                                                                                             |
+| **`summaryArgument`**   | <code>string</code>                                              | iOS          | Summary argument. Ignored on iOS 15 and newer.                                                                                                                                                                                                                  |
+| **`relevanceScore`**    | <code>number</code>                                              | iOS          | Relevance score from 0 to 1.                                                                                                                                                                                                                                    |
+| **`interruptionLevel`** | <code><a href="#interruptionlevel">InterruptionLevel</a></code>  | iOS          | Interruption level. `critical` and `timeSensitive` need Apple entitlements.                                                                                                                                                                                     |
+| **`group`**             | <code>string</code>                                              | Android      | Notification group key.                                                                                                                                                                                                                                         |
+| **`groupSummary`**      | <code>boolean</code>                                             | Android      | Group summary. Requires `group`.                                                                                                                                                                                                                                |
+| **`ongoing`**           | <code>boolean</code>                                             | Android      | The notification cannot be swiped away. Forces `autoCancel` off.                                                                                                                                                                                                |
+| **`autoCancel`**        | <code>boolean</code>                                             | Android      | Remove the notification when the user taps it. Defaults to true.                                                                                                                                                                                                |
+| **`inboxList`**         | <code>string[]</code>                                            | Android      | Inbox lines. At most five.                                                                                                                                                                                                                                      |
+| **`silent`**            | <code>boolean</code>                                             | iOS          | When true, a notification delivered in the foreground is not presented. The `localNotificationReceived` event still fires.                                                                                                                                      |
+| **`badge`**             | <code>number</code>                                              | iOS          | Application icon badge.                                                                                                                                                                                                                                         |
 
 
 #### Schedule
 
-| Prop                 | Type                                                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| -------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **`at`**             | <code>string \| Date</code>         | Fire at this instant. A `Date` or an ISO-8601 string (`2026-11-05T18:00:00.000Z` or an offset form). Must be in the future and within 8 years. On output this plugin returns an ISO-8601 UTC string.                                                                                                                                                                                                                                                                   |
-| **`repeats`**        | <code>boolean</code>                                    | With `at`, repeat forever using the fixed delay between the call and `at`. That delay must be at least 60 seconds. Not valid with `on` or `every`.                                                                                                                                                                                                                                                                                                                                         |
-| **`allowWhileIdle`** | <code>boolean</code>                                    | Android: allow the alarm to fire in Doze maintenance windows. Exact Doze alarms are still limited by the system (roughly one every 9 minutes per app). Other platforms ignore this flag.                                                                                                                                                                                                                                                                                                   |
-| **`on`**             | <code><a href="#scheduleon">ScheduleOn</a></code>       | Fire on the next local time that matches these fields, then repeat. Month is 1–12. <a href="#weekday">Weekday</a> is 1 (Sunday) through 7 (Saturday). Omitted date fields match any value. Omitted `second` means 0. Omitted `minute` means 0 unless only `second` is set, in which case every minute matches. Omitted `hour` means 0 when a date field is set or when no time field is set; when `minute` or `second` is set and no date field is set, omitted `hour` matches every hour. |
-| **`every`**          | <code><a href="#scheduleevery">ScheduleEvery</a></code> | Repeat by a fixed unit. `count` is how many of those units make one interval (every 2 days is `{ every: 'day', count: 2 }`). The first fire is one interval after the call. The interval must be at least 60 seconds. `second`, `minute`, and `hour` are fixed durations. `day`, `week`, `two-weeks`, `month`, and `year` use local calendar addition on Android. On iOS every unit is the fixed duration measured when the notification is scheduled.                                     |
-| **`count`**          | <code>number</code>                                     | Multiplier for `every`. Defaults to 1. Maximum 1000.                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Prop                 | Type                                                    | Platform     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| -------------------- | ------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`at`**             | <code>string \| Date</code>                             | iOS, Android | Fire at this instant. A `Date` or an ISO-8601 string (`2026-11-05T18:00:00.000Z` or an offset form). Must be in the future and within 8 years. On output this plugin returns an ISO-8601 UTC string.                                                                                                                                                                                                                                                                                       |
+| **`repeats`**        | <code>boolean</code>                                    | iOS, Android | With `at`, repeat forever using the fixed delay between the call and `at`. That delay must be at least 60 seconds. Not valid with `on` or `every`.                                                                                                                                                                                                                                                                                                                                         |
+| **`allowWhileIdle`** | <code>boolean</code>                                    | Android      | Allow the alarm to fire in Doze maintenance windows. Exact Doze alarms are still limited by the system (roughly one every 9 minutes per app).                                                                                                                                                                                                                                                                                                                                              |
+| **`on`**             | <code><a href="#scheduleon">ScheduleOn</a></code>       | iOS, Android | Fire on the next local time that matches these fields, then repeat. Month is 1–12. <a href="#weekday">Weekday</a> is 1 (Sunday) through 7 (Saturday). Omitted date fields match any value. Omitted `second` means 0. Omitted `minute` means 0 unless only `second` is set, in which case every minute matches. Omitted `hour` means 0 when a date field is set or when no time field is set; when `minute` or `second` is set and no date field is set, omitted `hour` matches every hour. |
+| **`every`**          | <code><a href="#scheduleevery">ScheduleEvery</a></code> | iOS, Android | Repeat by a fixed unit. `count` is how many of those units make one interval (every 2 days is `{ every: 'day', count: 2 }`). The first fire is one interval after the call. The interval must be at least 60 seconds. `second`, `minute`, and `hour` are fixed durations. `day`, `week`, `two-weeks`, `month`, and `year` use local calendar addition on Android. On iOS every unit is the fixed duration measured when the notification is scheduled.                                     |
+| **`count`**          | <code>number</code>                                     | iOS, Android | Multiplier for `every`. Defaults to 1. Maximum 1000.                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 #### ScheduleOn
 
-| Prop          | Type                | Description                                                  |
-| ------------- | ------------------- | ------------------------------------------------------------ |
-| **`year`**    | <code>number</code> | Full year, 1970 through 2100.                                |
-| **`month`**   | <code>number</code> | 1 (January) through 12.                                      |
-| **`day`**     | <code>number</code> | Day of the month, 1 through 31. Impossible dates never fire. |
-| **`weekday`** | <code>number</code> | 1 Sunday through 7 Saturday.                                 |
-| **`hour`**    | <code>number</code> | 0 through 23, device local time.                             |
-| **`minute`**  | <code>number</code> | 0 through 59.                                                |
-| **`second`**  | <code>number</code> | 0 through 59.                                                |
+| Prop          | Type                | Platform     | Description                                                  |
+| ------------- | ------------------- | ------------ | ------------------------------------------------------------ |
+| **`year`**    | <code>number</code> | iOS, Android | Full year, 1970 through 2100.                                |
+| **`month`**   | <code>number</code> | iOS, Android | 1 (January) through 12.                                      |
+| **`day`**     | <code>number</code> | iOS, Android | Day of the month, 1 through 31. Impossible dates never fire. |
+| **`weekday`** | <code>number</code> | iOS, Android | 1 Sunday through 7 Saturday.                                 |
+| **`hour`**    | <code>number</code> | iOS, Android | 0 through 23, device local time.                             |
+| **`minute`**  | <code>number</code> | iOS, Android | 0 through 59.                                                |
+| **`second`**  | <code>number</code> | iOS, Android | 0 through 59.                                                |
 
 
 #### PendingResult
 
-| Prop                | Type                                          |
-| ------------------- | --------------------------------------------- |
-| **`notifications`** | <code>PendingLocalNotificationSchema[]</code> |
+| Prop                | Type                                          | Platform     |
+| ------------------- | --------------------------------------------- | ------------ |
+| **`notifications`** | <code>PendingLocalNotificationSchema[]</code> | iOS, Android |
 
 
 #### PendingLocalNotificationSchema
 
-| Prop           | Type                                                             | Description                                                                                                                                |
-| -------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| **`id`**       | <code>number</code>                                              |                                                                                                                                            |
-| **`title`**    | <code>string</code>                                              |                                                                                                                                            |
-| **`body`**     | <code>string</code>                                              |                                                                                                                                            |
-| **`extra`**    | <code><a href="#record">Record</a>&lt;string, unknown&gt;</code> |                                                                                                                                            |
-| **`schedule`** | <code><a href="#schedule">Schedule</a></code>                    | The schedule that was stored. `at`, when present, is an ISO-8601 UTC string even if a `Date` was passed to `schedule`. |
+| Prop           | Type                                                             | Platform     | Description                                                                                                                                |
+| -------------- | ---------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`id`**       | <code>number</code>                                              | iOS, Android |                                                                                                                                            |
+| **`title`**    | <code>string</code>                                              | iOS, Android |                                                                                                                                            |
+| **`body`**     | <code>string</code>                                              | iOS, Android |                                                                                                                                            |
+| **`extra`**    | <code><a href="#record">Record</a>&lt;string, unknown&gt;</code> | iOS, Android |                                                                                                                                            |
+| **`schedule`** | <code><a href="#schedule">Schedule</a></code>                    | iOS, Android | The schedule that was stored. `at`, when present, is an ISO-8601 UTC string even if a `Date` was passed to `schedule`.                     |
 
 
 #### CancelOptions
 
-| Prop                | Type                           |
-| ------------------- | ------------------------------ |
-| **`notifications`** | <code>{ id: number; }[]</code> |
+| Prop                | Type                           | Platform     |
+| ------------------- | ------------------------------ | ------------ |
+| **`notifications`** | <code>{ id: number; }[]</code> | iOS, Android |
 
 
 #### DeliveredNotifications
 
-| Prop                | Type                                       |
-| ------------------- | ------------------------------------------ |
-| **`notifications`** | <code>DeliveredNotificationSchema[]</code> |
+| Prop                | Type                                       | Platform     |
+| ------------------- | ------------------------------------------ | ------------ |
+| **`notifications`** | <code>DeliveredNotificationSchema[]</code> | iOS, Android |
 
 
 #### DeliveredNotificationSchema
 
-| Prop               | Type                                                             | Description                                                               |
-| ------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| **`id`**           | <code>number</code>                                              |                                                                           |
-| **`title`**        | <code>string</code>                                              |                                                                           |
-| **`body`**         | <code>string</code>                                              |                                                                           |
-| **`tag`**          | <code>string</code>                                              | Android notification tag when one was set. This plugin does not set tags. |
-| **`group`**        | <code>string</code>                                              |                                                                           |
-| **`groupSummary`** | <code>boolean</code>                                             |                                                                           |
-| **`extra`**        | <code><a href="#record">Record</a>&lt;string, unknown&gt;</code> |                                                                           |
-| **`schedule`**     | <code><a href="#schedule">Schedule</a></code>                    |                                                                           |
+| Prop               | Type                                                             | Platform     | Description                                            |
+| ------------------ | ---------------------------------------------------------------- | ------------ | ------------------------------------------------------ |
+| **`id`**           | <code>number</code>                                              | iOS, Android |                                                        |
+| **`title`**        | <code>string</code>                                              | iOS, Android |                                                        |
+| **`body`**         | <code>string</code>                                              | iOS, Android |                                                        |
+| **`tag`**          | <code>string</code>                                              | Android      | Notification tag when one was set. This plugin does not set tags. |
+| **`group`**        | <code>string</code>                                              | Android      |                                                        |
+| **`groupSummary`** | <code>boolean</code>                                             | Android      |                                                        |
+| **`extra`**        | <code><a href="#record">Record</a>&lt;string, unknown&gt;</code> | iOS, Android |                                                        |
+| **`schedule`**     | <code><a href="#schedule">Schedule</a></code>                    | iOS, Android |                                                        |
 
 
 #### PluginListenerHandle
 
-| Prop         | Type                                      |
-| ------------ | ----------------------------------------- |
-| **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
+| Prop         | Type                                      | Platform     |
+| ------------ | ----------------------------------------- | ------------ |
+| **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> | iOS, Android |
 
 
 #### ActionPerformed
 
-| Prop               | Type                                                                        | Description                                                            |
-| ------------------ | --------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| **`actionId`**     | <code>string</code>                                                         | `tap` when the notification body is opened, `dismiss` when it is cleared. |
-| **`notification`** | <code><a href="#localnotificationschema">LocalNotificationSchema</a></code> |                                                                            |
+| Prop               | Type                                                                        | Platform     | Description                                                                |
+| ------------------ | --------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------- |
+| **`actionId`**     | <code>string</code>                                                         | iOS, Android | `tap` when the notification body is opened, `dismiss` when it is cleared. |
+| **`notification`** | <code><a href="#localnotificationschema">LocalNotificationSchema</a></code> | iOS, Android |                                                                            |
