@@ -1,6 +1,4 @@
 import type {
-  Action,
-  ActionType,
   Attachment,
   AttachmentRect,
   InterruptionLevel,
@@ -75,7 +73,6 @@ export interface ValidatedNotification {
   largeIcon?: string;
   iconColor?: string;
   attachments: Attachment[];
-  actionTypeId?: string;
   extra?: Record<string, unknown>;
   threadIdentifier?: string;
   summaryArgument?: string;
@@ -130,10 +127,6 @@ export function parseNotification(value: unknown, now: number, index = 0): Valid
   }
   const ongoing = optionalBool(value.ongoing, false, 'ongoing');
   const autoCancel = ongoing ? false : optionalBool(value.autoCancel, true, 'autoCancel');
-  const actionTypeId = optionalToken(value.actionTypeId, ID_PATTERN, 'actionTypeId');
-  if (actionTypeId === 'tap' || actionTypeId === 'dismiss') {
-    throw new LocalNotificationsError('INVALID_ACTION', 'actionTypeId cannot be tap or dismiss.');
-  }
   return {
     id,
     title,
@@ -145,7 +138,6 @@ export function parseNotification(value: unknown, now: number, index = 0): Valid
     largeIcon: optionalToken(value.largeIcon, RESOURCE_PATTERN, 'largeIcon'),
     iconColor: optionalColor(value.iconColor, 'iconColor'),
     attachments: parseAttachments(value.attachments),
-    actionTypeId,
     extra: parseExtra(value.extra),
     threadIdentifier: optionalToken(value.threadIdentifier, GROUP_PATTERN, 'threadIdentifier'),
     summaryArgument: optionalText(value.summaryArgument, 200, 'summaryArgument'),
@@ -251,49 +243,6 @@ export function parseSchedule(
     schedule: idle ? { allowWhileIdle: true } : undefined,
     plan: { kind: 'immediate' },
   };
-}
-
-export function parseActionTypes(value: unknown): ActionType[] {
-  if (!isPlainObject(value) || !Array.isArray(value.types)) {
-    throw new LocalNotificationsError('INVALID_ACTION', 'types must be an array of action types.');
-  }
-  if (value.types.length > 20) {
-    throw new LocalNotificationsError('INVALID_ACTION', 'At most 20 action types can be registered.');
-  }
-  const ids = new Set<string>();
-  return value.types.map((entry) => {
-    if (!isPlainObject(entry)) {
-      throw new LocalNotificationsError('INVALID_ACTION', 'Each action type must be an object.');
-    }
-    const id = requireToken(entry.id, ID_PATTERN, 'id', 'INVALID_ACTION');
-    if (id === 'tap' || id === 'dismiss') {
-      throw new LocalNotificationsError('INVALID_ACTION', 'Action type id cannot be tap or dismiss.');
-    }
-    if (ids.has(id)) {
-      throw new LocalNotificationsError('INVALID_ACTION', `Duplicate action type id ${id}.`);
-    }
-    ids.add(id);
-    const actions = parseActions(entry.actions);
-    return {
-      id,
-      actions,
-      iosHiddenPreviewsBodyPlaceholder: optionalText(
-        entry.iosHiddenPreviewsBodyPlaceholder,
-        100,
-        'iosHiddenPreviewsBodyPlaceholder',
-        'INVALID_ACTION',
-      ),
-      iosCustomDismissAction: optionalBool(entry.iosCustomDismissAction, false, 'iosCustomDismissAction', 'INVALID_ACTION'),
-      iosAllowInCarPlay: optionalBool(entry.iosAllowInCarPlay, false, 'iosAllowInCarPlay', 'INVALID_ACTION'),
-      iosHiddenPreviewsShowTitle: optionalBool(entry.iosHiddenPreviewsShowTitle, false, 'iosHiddenPreviewsShowTitle', 'INVALID_ACTION'),
-      iosHiddenPreviewsShowSubtitle: optionalBool(
-        entry.iosHiddenPreviewsShowSubtitle,
-        false,
-        'iosHiddenPreviewsShowSubtitle',
-        'INVALID_ACTION',
-      ),
-    };
-  });
 }
 
 export function parseCancelIds(value: unknown): number[] {
@@ -429,7 +378,6 @@ export function toPublicNotification(notification: ValidatedNotification): Local
     largeIcon: notification.largeIcon,
     iconColor: notification.iconColor,
     attachments: notification.attachments.length > 0 ? notification.attachments : undefined,
-    actionTypeId: notification.actionTypeId,
     extra: notification.extra,
     threadIdentifier: notification.threadIdentifier,
     summaryArgument: notification.summaryArgument,
@@ -577,40 +525,6 @@ function dateFieldsMatch(ms: number, match: CalendarMatch): boolean {
   if (match.day != null && date.getDate() !== match.day) return false;
   if (match.weekday != null && date.getDay() + 1 !== match.weekday) return false;
   return true;
-}
-
-function parseActions(value: unknown): Action[] | undefined {
-  if (value == null) return undefined;
-  if (!Array.isArray(value)) {
-    throw new LocalNotificationsError('INVALID_ACTION', 'actions must be an array.');
-  }
-  if (value.length > 3) {
-    throw new LocalNotificationsError('INVALID_ACTION', 'An action type can have at most 3 actions.');
-  }
-  const ids = new Set<string>();
-  return value.map((entry) => {
-    if (!isPlainObject(entry)) {
-      throw new LocalNotificationsError('INVALID_ACTION', 'Each action must be an object.');
-    }
-    const id = requireToken(entry.id, ID_PATTERN, 'id', 'INVALID_ACTION');
-    if (id === 'tap' || id === 'dismiss') {
-      throw new LocalNotificationsError('INVALID_ACTION', 'Action id cannot be tap or dismiss.');
-    }
-    if (ids.has(id)) {
-      throw new LocalNotificationsError('INVALID_ACTION', `Duplicate action id ${id}.`);
-    }
-    ids.add(id);
-    return {
-      id,
-      title: requireText(entry.title, 1, 40, 'title', true, 'INVALID_ACTION'),
-      requiresAuthentication: optionalBool(entry.requiresAuthentication, false, 'requiresAuthentication', 'INVALID_ACTION'),
-      foreground: optionalBool(entry.foreground, false, 'foreground', 'INVALID_ACTION'),
-      destructive: optionalBool(entry.destructive, false, 'destructive', 'INVALID_ACTION'),
-      input: optionalBool(entry.input, false, 'input', 'INVALID_ACTION'),
-      inputButtonTitle: optionalText(entry.inputButtonTitle, 30, 'inputButtonTitle', 'INVALID_ACTION'),
-      inputPlaceholder: optionalText(entry.inputPlaceholder, 60, 'inputPlaceholder', 'INVALID_ACTION'),
-    };
-  });
 }
 
 function parseAttachments(value: unknown): Attachment[] {

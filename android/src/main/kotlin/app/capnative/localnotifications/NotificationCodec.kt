@@ -15,7 +15,6 @@ internal object NotificationCodec {
         putOptional(json, "smallIcon", notification.smallIcon)
         putOptional(json, "largeIcon", notification.largeIcon)
         putOptional(json, "iconColor", notification.iconColor)
-        putOptional(json, "actionTypeId", notification.actionTypeId)
         putOptional(json, "extraJson", notification.extraJson)
         putOptional(json, "group", notification.group)
         json.put("groupSummary", notification.groupSummary)
@@ -48,7 +47,6 @@ internal object NotificationCodec {
             smallIcon = json.optStringOrNull("smallIcon"),
             largeIcon = json.optStringOrNull("largeIcon"),
             iconColor = json.optStringOrNull("iconColor"),
-            actionTypeId = json.optStringOrNull("actionTypeId"),
             extraJson = json.optStringOrNull("extraJson"),
             group = json.optStringOrNull("group"),
             groupSummary = json.optBoolean("groupSummary", false),
@@ -59,61 +57,6 @@ internal object NotificationCodec {
             schedule = json.optJSONObject("schedule")?.let { scheduleFromJson(it) },
             plan = plan,
         )
-    }
-
-    fun actionsToJson(types: List<ActionTypeSpec>): JSONArray {
-        val array = JSONArray()
-        types.forEach { type ->
-            val json = JSONObject()
-            json.put("id", type.id)
-            val actions = JSONArray()
-            type.actions.forEach { action ->
-                val item = JSONObject()
-                item.put("id", action.id)
-                item.put("title", action.title)
-                item.put("requiresAuthentication", action.requiresAuthentication)
-                item.put("foreground", action.foreground)
-                item.put("destructive", action.destructive)
-                item.put("input", action.input)
-                putOptional(item, "inputButtonTitle", action.inputButtonTitle)
-                putOptional(item, "inputPlaceholder", action.inputPlaceholder)
-                actions.put(item)
-            }
-            json.put("actions", actions)
-            array.put(json)
-        }
-        return array
-    }
-
-    fun actionsFromJson(array: JSONArray): List<ActionTypeSpec> {
-        val types = ArrayList<ActionTypeSpec>()
-        for (index in 0 until array.length()) {
-            val json = array.optJSONObject(index) ?: continue
-            val actionsJson = json.optJSONArray("actions")
-            val actions = ArrayList<ActionSpec>()
-            if (actionsJson != null) {
-                for (actionIndex in 0 until actionsJson.length()) {
-                    val item = actionsJson.optJSONObject(actionIndex) ?: continue
-                    val id = item.optStringOrNull("id") ?: continue
-                    val title = item.optStringOrNull("title") ?: continue
-                    actions.add(
-                        ActionSpec(
-                            id = id,
-                            title = title,
-                            requiresAuthentication = item.optBoolean("requiresAuthentication", false),
-                            foreground = item.optBoolean("foreground", false),
-                            destructive = item.optBoolean("destructive", false),
-                            input = item.optBoolean("input", false),
-                            inputButtonTitle = item.optStringOrNull("inputButtonTitle"),
-                            inputPlaceholder = item.optStringOrNull("inputPlaceholder"),
-                        ),
-                    )
-                }
-            }
-            val id = json.optStringOrNull("id") ?: continue
-            types.add(ActionTypeSpec(id, actions))
-        }
-        return types
     }
 
     private fun scheduleToJson(schedule: ScheduleEcho): JSONObject {

@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.app.RemoteInput
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.PermissionState
@@ -75,15 +74,7 @@ class LocalNotificationsPlugin : Plugin() {
                 return
             }
             val store = NotificationStore(context)
-            val actions = store.actionTypes()
             for (notification in parsed) {
-                if (notification.actionTypeId != null && actions.none { it.id == notification.actionTypeId }) {
-                    call.reject(
-                        "Action type \"${notification.actionTypeId}\" is not registered. Call registerActionTypes() first.",
-                        "INVALID_ACTION",
-                    )
-                    return
-                }
                 notification.smallIcon?.let { NotificationPresenter.requireIcon(context, it) }
                 notification.largeIcon?.let { NotificationPresenter.requireIcon(context, it) }
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O && notification.sound != null) {
@@ -105,7 +96,7 @@ class LocalNotificationsPlugin : Plugin() {
                 NotificationPresenter.cancel(context, stored.id)
                 if (stored.plan is FirePlan.Immediate) {
                     store.remove(stored.id)
-                    NotificationPresenter.show(context, stored, actions)
+                    NotificationPresenter.show(context, stored)
                     deliverReceived(stored)
                 } else {
                     store.upsert(stored)
@@ -185,19 +176,6 @@ class LocalNotificationsPlugin : Plugin() {
         call.resolve()
     }
 
-    @PluginMethod
-    fun registerActionTypes(call: PluginCall) {
-        try {
-            val data = NotificationParser.asMap(call.data)
-                ?: throw NotificationException("INVALID_ACTION", "types must be an array of action types.")
-            val types = NotificationParser.parseActionTypes(data)
-            NotificationStore(context).saveActionTypes(types)
-            call.resolve()
-        } catch (error: NotificationException) {
-            call.reject(error.message, error.code)
-        }
-    }
-
     private fun displayState(): String {
         val enabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
@@ -219,12 +197,7 @@ class LocalNotificationsPlugin : Plugin() {
             while (seenTokens.size > 32) seenTokens.removeFirst()
         }
         intent.removeExtra(Extras.TOKEN)
-        val input = RemoteInput.getResultsFromIntent(intent)
-            ?.getCharSequence(Extras.REMOTE_INPUT)
-            ?.toString()
-            ?.take(500)
-            ?: intent.getStringExtra(Extras.INPUT)
-        deliverAction(intent, input)
+        deliverAction(intent)
     }
 
     private fun pendingJson(notification: StoredNotification): JSObject {
@@ -276,10 +249,10 @@ class LocalNotificationsPlugin : Plugin() {
             plugin.notifyListeners("localNotificationReceived", plugin.pendingJson(notification), true)
         }
 
-        fun deliverAction(intent: Intent, input: String?): Boolean {
-            val plugin = instance ?: return false
+        fun deliverAction(intent: Intent) {
+            val plugin = instance ?: return
             val id = intent.getIntExtra(Extras.ID, Int.MIN_VALUE)
-            if (id == Int.MIN_VALUE || intent.getStringExtra(Extras.MARKER) != Extras.MARKER_VALUE) return false
+            if (id == Int.MIN_VALUE || intent.getStringExtra(Extras.MARKER) != Extras.MARKER_VALUE) return
             val notification = JSObject()
             notification.put("id", id)
             notification.put("title", intent.getStringExtra(Extras.TITLE) ?: "")
@@ -294,9 +267,7 @@ class LocalNotificationsPlugin : Plugin() {
             val action = JSObject()
             action.put("actionId", intent.getStringExtra(Extras.ACTION) ?: "tap")
             action.put("notification", notification)
-            if (!input.isNullOrEmpty()) action.put("inputValue", input)
             plugin.notifyListeners("localNotificationActionPerformed", action, true)
-            return true
         }
     }
 }

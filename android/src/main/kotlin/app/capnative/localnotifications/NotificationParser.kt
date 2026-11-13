@@ -14,7 +14,6 @@ object NotificationParser {
     const val INT32_MIN = -2147483648
     const val INT32_MAX = 2147483647
 
-    private val ID_PATTERN = Regex("^[A-Za-z0-9_-]{1,64}$")
     private val RESOURCE_PATTERN = Regex("^[a-z0-9_]{1,100}$")
     private val SOUND_FILE_PATTERN = Regex("^[A-Za-z0-9_-]{1,100}\\.[A-Za-z0-9]{1,8}$")
     private val GROUP_PATTERN = Regex("^[A-Za-z0-9_.-]{1,128}$")
@@ -55,10 +54,6 @@ object NotificationParser {
         }
         val ongoing = optionalBool(value["ongoing"], false, "ongoing", "INVALID_NOTIFICATION")
         val autoCancel = if (ongoing) false else optionalBool(value["autoCancel"], true, "autoCancel", "INVALID_NOTIFICATION")
-        val actionTypeId = optionalToken(value["actionTypeId"], ID_PATTERN, "actionTypeId", "INVALID_NOTIFICATION")
-        if (actionTypeId == "tap" || actionTypeId == "dismiss") {
-            throw NotificationException("INVALID_ACTION", "actionTypeId cannot be tap or dismiss.")
-        }
         return ValidatedNotification(
             id = id,
             title = title,
@@ -69,7 +64,6 @@ object NotificationParser {
             smallIcon = optionalToken(value["smallIcon"], RESOURCE_PATTERN, "smallIcon", "INVALID_NOTIFICATION"),
             largeIcon = optionalToken(value["largeIcon"], RESOURCE_PATTERN, "largeIcon", "INVALID_NOTIFICATION"),
             iconColor = optionalColor(value["iconColor"], "iconColor", "INVALID_NOTIFICATION"),
-            actionTypeId = actionTypeId,
             extraJson = parseExtra(value["extra"]),
             group = group,
             groupSummary = groupSummary,
@@ -80,21 +74,6 @@ object NotificationParser {
             schedule = scheduled.echo,
             plan = scheduled.plan,
         )
-    }
-
-    fun parseActionTypes(value: Map<String, Any?>): List<ActionTypeSpec> {
-        val types = value["types"] as? List<*> ?: throw NotificationException("INVALID_ACTION", "types must be an array of action types.")
-        if (types.size > 20) throw NotificationException("INVALID_ACTION", "At most 20 action types can be registered.")
-        val ids = HashSet<String>()
-        return types.map { entry ->
-            val map = asMap(entry) ?: throw NotificationException("INVALID_ACTION", "Each action type must be an object.")
-            val id = requireToken(map["id"], ID_PATTERN, "id", "INVALID_ACTION")
-            if (id == "tap" || id == "dismiss") {
-                throw NotificationException("INVALID_ACTION", "Action type id cannot be tap or dismiss.")
-            }
-            if (!ids.add(id)) throw NotificationException("INVALID_ACTION", "Duplicate action type id $id.")
-            ActionTypeSpec(id, parseActions(map["actions"]))
-        }
     }
 
     fun parseCancelIds(items: List<*>): List<Int> {
@@ -224,29 +203,6 @@ object NotificationParser {
             throw NotificationException("INVALID_SCHEDULE", "schedule.on must include at least one field.")
         }
         return match
-    }
-
-    private fun parseActions(value: Any?): List<ActionSpec> {
-        if (value == null) return emptyList()
-        val list = listOf(value) ?: throw NotificationException("INVALID_ACTION", "actions must be an array.")
-        if (list.size > 3) throw NotificationException("INVALID_ACTION", "An action type can have at most 3 actions.")
-        val ids = HashSet<String>()
-        return list.map { entry ->
-            val map = asMap(entry) ?: throw NotificationException("INVALID_ACTION", "Each action must be an object.")
-            val id = requireToken(map["id"], ID_PATTERN, "id", "INVALID_ACTION")
-            if (id == "tap" || id == "dismiss") throw NotificationException("INVALID_ACTION", "Action id cannot be tap or dismiss.")
-            if (!ids.add(id)) throw NotificationException("INVALID_ACTION", "Duplicate action id $id.")
-            ActionSpec(
-                id = id,
-                title = requireText(map["title"], 1, 40, "title", "INVALID_ACTION"),
-                requiresAuthentication = optionalBool(map["requiresAuthentication"], false, "requiresAuthentication", "INVALID_ACTION"),
-                foreground = optionalBool(map["foreground"], false, "foreground", "INVALID_ACTION"),
-                destructive = optionalBool(map["destructive"], false, "destructive", "INVALID_ACTION"),
-                input = optionalBool(map["input"], false, "input", "INVALID_ACTION"),
-                inputButtonTitle = optionalText(map["inputButtonTitle"], 30, "inputButtonTitle", "INVALID_ACTION"),
-                inputPlaceholder = optionalText(map["inputPlaceholder"], 60, "inputPlaceholder", "INVALID_ACTION"),
-            )
-        }
     }
 
     private fun parseInbox(value: Any?): List<String>? {

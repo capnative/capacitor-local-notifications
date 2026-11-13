@@ -69,7 +69,6 @@ public struct ValidatedNotification: Equatable {
     public var title: String
     public var body: String
     public var sound: String?
-    public var actionTypeId: String?
     public var extraJSON: String?
     public var threadIdentifier: String?
     public var summaryArgument: String?
@@ -116,12 +115,11 @@ public enum SchedulePlan {
         let title = try requireText(value["title"], 1, 200, "title", "INVALID_NOTIFICATION")
         let body = try requireText(value["body"], 0, 2000, "body", "INVALID_NOTIFICATION")
         let scheduled = try parseSchedule(value["schedule"], now: now, calendar: calendar)
-        var notification = ValidatedNotification(
+        let notification = ValidatedNotification(
             id: id,
             title: title,
             body: body,
             sound: try parseSound(value["sound"]),
-            actionTypeId: try optionalToken(value["actionTypeId"], "^[A-Za-z0-9_-]{1,64}$", "actionTypeId", "INVALID_NOTIFICATION"),
             extraJSON: try parseExtra(value["extra"]),
             threadIdentifier: try optionalToken(value["threadIdentifier"], "^[A-Za-z0-9_.-]{1,128}$", "threadIdentifier", "INVALID_NOTIFICATION"),
             summaryArgument: try optionalText(value["summaryArgument"], 200, "summaryArgument", "INVALID_NOTIFICATION"),
@@ -134,9 +132,6 @@ public enum SchedulePlan {
             schedule: scheduled.echo,
             plan: scheduled.plan
         )
-        if notification.actionTypeId == "tap" || notification.actionTypeId == "dismiss" {
-            throw NotificationFailure(code: "INVALID_ACTION", message: "actionTypeId cannot be tap or dismiss.")
-        }
         return notification
     }
 

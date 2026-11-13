@@ -41,13 +41,6 @@ export interface LocalNotificationsPlugin {
   removeAllDeliveredNotifications(): Promise<void>;
 
   /**
-   * Register notification action buttons. Call this before scheduling a
-   * notification that sets `actionTypeId`. Replaces any types registered earlier.
-   * iOS and Android show the buttons.
-   */
-  registerActionTypes(options: RegisterActionTypesOptions): Promise<void>;
-
-  /**
    * Fired when this plugin posts a notification while the app process can
    * deliver JavaScript events. iOS does not emit this for notifications
    * delivered while the app is suspended. Android does not emit it when the
@@ -59,7 +52,7 @@ export interface LocalNotificationsPlugin {
   ): Promise<PluginListenerHandle>;
 
   /**
-   * Fired when the user taps a notification or one of its actions.
+   * Fired when the user taps a notification or clears it.
    * `actionId` is `tap` for the notification body and `dismiss` when the
    * notification is cleared. Dismiss is delivered on Android only while the
    * process is alive.
@@ -119,58 +112,12 @@ export interface DeliveredNotificationSchema {
   group?: string;
   groupSummary?: boolean;
   extra?: Record<string, unknown>;
-  actionTypeId?: string;
   schedule?: Schedule;
   attachments?: Attachment[];
 }
 
-export interface RegisterActionTypesOptions {
-  types: ActionType[];
-}
-
-export interface ActionType {
-  /** Referenced by `LocalNotificationSchema.actionTypeId`. */
-  id: string;
-  /** At most three actions. Android cannot show more than three buttons. */
-  actions?: Action[];
-  /** iOS `hiddenPreviewsBodyPlaceholder`. */
-  iosHiddenPreviewsBodyPlaceholder?: string;
-  /** iOS category option. Combined with the other iOS flags. */
-  iosCustomDismissAction?: boolean;
-  /** iOS category option. */
-  iosAllowInCarPlay?: boolean;
-  /** iOS category option. */
-  iosHiddenPreviewsShowTitle?: boolean;
-  /** iOS category option. */
-  iosHiddenPreviewsShowSubtitle?: boolean;
-}
-
-export interface Action {
-  /** Reported as `actionId`. `tap` and `dismiss` are reserved. */
-  id: string;
-  title: string;
-  /** iOS only. Requires the device to be unlocked. */
-  requiresAuthentication?: boolean;
-  /**
-   * iOS brings the app forward when true and can deliver a background action when false.
-   * Android action buttons always open the app. A broadcast trampoline cannot reliably
-   * start the activity on Android 12 or newer, so the button's pending intent is the activity.
-   */
-  foreground?: boolean;
-  /** iOS destructive style. Android has no equivalent and ignores this flag. */
-  destructive?: boolean;
-  /** Text input. iOS uses a text action; Android uses `RemoteInput`. */
-  input?: boolean;
-  /** iOS text-input button title. */
-  inputButtonTitle?: string;
-  /** iOS text-input placeholder. */
-  inputPlaceholder?: string;
-}
-
 export interface ActionPerformed {
   actionId: string;
-  /** Present when the action has `input: true` and the user submitted text. */
-  inputValue?: string;
   notification: LocalNotificationSchema;
 }
 
@@ -236,8 +183,6 @@ export interface LocalNotificationSchema {
   iconColor?: string;
   /** iOS attachments. See `Attachment`. */
   attachments?: Attachment[];
-  /** Must match a type passed to `registerActionTypes` in this app run (and persisted by the plugin). */
-  actionTypeId?: string;
   /**
    * JSON object stored with the notification and returned to JavaScript.
    * Do not put secrets here. It is readable from the delivered notification

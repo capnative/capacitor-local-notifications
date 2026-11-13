@@ -60,22 +60,6 @@ data class ScheduleEcho(
     val on: CalendarMatch? = null,
 )
 
-data class ActionSpec(
-    val id: String,
-    val title: String,
-    val requiresAuthentication: Boolean = false,
-    val foreground: Boolean = false,
-    val destructive: Boolean = false,
-    val input: Boolean = false,
-    val inputButtonTitle: String? = null,
-    val inputPlaceholder: String? = null,
-)
-
-data class ActionTypeSpec(
-    val id: String,
-    val actions: List<ActionSpec> = emptyList(),
-)
-
 data class ValidatedNotification(
     val id: Int,
     val title: String,
@@ -86,7 +70,6 @@ data class ValidatedNotification(
     val smallIcon: String? = null,
     val largeIcon: String? = null,
     val iconColor: String? = null,
-    val actionTypeId: String? = null,
     val extraJson: String? = null,
     val group: String? = null,
     val groupSummary: Boolean = false,
@@ -108,7 +91,6 @@ data class StoredNotification(
     val smallIcon: String? = null,
     val largeIcon: String? = null,
     val iconColor: String? = null,
-    val actionTypeId: String? = null,
     val extraJson: String? = null,
     val group: String? = null,
     val groupSummary: Boolean = false,
@@ -121,6 +103,6 @@ data class StoredNotification(
 )
 
 fun ValidatedNotification.toStored(): StoredNotification = StoredNotification(
-    id, title, body, largeBody, summaryText, sound, smallIcon, largeIcon, iconColor, actionTypeId,
+    id, title, body, largeBody, summaryText, sound, smallIcon, largeIcon, iconColor,
     extraJson, group, groupSummary, ongoing, autoCancel, inbox, allowWhileIdle, schedule, plan,
 )

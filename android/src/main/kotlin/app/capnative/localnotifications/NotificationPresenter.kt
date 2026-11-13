@@ -20,16 +20,12 @@ internal object Extras {
     const val ACTION = "capnative_ln_action"
     const val TOKEN = "capnative_ln_token"
     const val MARKER = "capnative_ln_marker"
-    const val FOREGROUND = "capnative_ln_foreground"
-    const val INPUT = "capnative_ln_input"
     const val EXTRA = "capnative_ln_extra"
     const val TITLE = "capnative_ln_title"
     const val BODY = "capnative_ln_body"
-    const val REMOTE_INPUT = "capnative_ln_remote_input"
     const val MARKER_VALUE = "capnative"
     const val DEFAULT_CHANNEL = "default"
     const val ACTION_FIRE = "app.capnative.localnotifications.FIRE"
-    const val ACTION_BUTTON = "app.capnative.localnotifications.ACTION"
     const val ACTION_DISMISS = "app.capnative.localnotifications.DISMISS"
 }
 
@@ -52,7 +48,7 @@ internal object NotificationPresenter {
         manager.createNotificationChannel(channel)
     }
 
-    fun show(context: Context, notification: StoredNotification, actions: List<ActionTypeSpec>) {
+    fun show(context: Context, notification: StoredNotification) {
         ensureDefaultChannel(context)
         val manager = NotificationManagerCompat.from(context)
         if (!manager.areNotificationsEnabled()) return
@@ -105,10 +101,6 @@ internal object NotificationPresenter {
         builder.addExtras(extras)
         builder.setContentIntent(contentIntent(context, notification))
         builder.setDeleteIntent(dismissIntent(context, notification))
-        val type = actions.firstOrNull { it.id == notification.actionTypeId }
-        type?.actions?.forEachIndexed { index, action ->
-            builder.addAction(actionButton(context, notification, index, action))
-        }
         manager.notify(notification.id, builder.build())
     }
 
@@ -159,23 +151,6 @@ internal object NotificationPresenter {
         val intent = Intent(context, ActionReceiver::class.java).setAction(Extras.ACTION_DISMISS)
         putPayload(intent, notification, "dismiss")
         return PendingIntent.getBroadcast(context, requestCode(notification.id, 3), intent, immutable())
-    }
-
-    private fun actionButton(context: Context, notification: StoredNotification, index: Int, action: ActionSpec): NotificationCompat.Action {
-        // Activity intents avoid the Android 12 notification-trampoline block that applies
-        // when a broadcast receiver starts the app. Text actions stay mutable so RemoteInput works.
-        val launch = launchIntent(context)
-        putPayload(launch, notification, action.id)
-        launch.putExtra(Extras.TOKEN, UUID.randomUUID().toString())
-        launch.putExtra(Extras.FOREGROUND, action.foreground)
-        val flags = if (action.input) mutable() else immutable()
-        val pending = PendingIntent.getActivity(context, requestCode(notification.id, 10 + index), launch, flags)
-        val builder = NotificationCompat.Action.Builder(0, action.title, pending)
-        if (action.input) {
-            val remote = androidx.core.app.RemoteInput.Builder(Extras.REMOTE_INPUT).setLabel(action.title).build()
-            builder.addRemoteInput(remote)
-        }
-        return builder.build()
     }
 
     private fun putPayload(intent: Intent, notification: StoredNotification, actionId: String) {
@@ -230,10 +205,5 @@ internal fun colorInt(value: String): Int {
 }
 
 internal fun immutable(): Int = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-
-internal fun mutable(): Int {
-    val mutableFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
-    return PendingIntent.FLAG_UPDATE_CURRENT or mutableFlag
-}
 
 internal fun requestCode(id: Int, salt: Int): Int = id xor (salt * 0x45D9F3B)

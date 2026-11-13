@@ -17,20 +17,19 @@ final class LocalNotificationsHandler: NSObject, NotificationHandlerProtocol {
 
     func didReceive(response: UNNotificationResponse) {
         guard isCapNative(response.notification.request.content.userInfo) else { return }
-        var data: [String: Any] = [:]
+        let actionId: String
         switch response.actionIdentifier {
         case UNNotificationDefaultActionIdentifier:
-            data["actionId"] = "tap"
+            actionId = "tap"
         case UNNotificationDismissActionIdentifier:
-            data["actionId"] = "dismiss"
+            actionId = "dismiss"
         default:
-            data["actionId"] = response.actionIdentifier
+            return
         }
-        if let input = response as? UNTextInputNotificationResponse {
-            data["inputValue"] = String(input.userText.prefix(500))
-        }
-        data["notification"] = payload(response.notification.request)
-        plugin?.notifyListeners("localNotificationActionPerformed", data: data, retainUntilConsumed: true)
+        plugin?.notifyListeners("localNotificationActionPerformed", data: [
+            "actionId": actionId,
+            "notification": payload(response.notification.request),
+        ], retainUntilConsumed: true)
     }
 
     func payload(_ request: UNNotificationRequest) -> [String: Any] {
@@ -48,9 +47,6 @@ final class LocalNotificationsHandler: NSObject, NotificationHandlerProtocol {
            let data = schedule.data(using: .utf8),
            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             notification["schedule"] = object
-        }
-        if let actionTypeId = request.content.userInfo["actionTypeId"] as? String {
-            notification["actionTypeId"] = actionTypeId
         }
         return notification
     }

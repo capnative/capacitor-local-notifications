@@ -12,19 +12,18 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "cancel", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "removeDeliveredNotifications", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "removeAllDeliveredNotifications", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "registerActionTypes", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "checkPermissions", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestPermissions", returnType: CAPPluginReturnPromise),
     ]
 
     private let handler = LocalNotificationsHandler()
-    private let defaultsKey = "capnative.local-notifications.actions"
     private let center = UNUserNotificationCenter.current()
 
     override public func load() {
         handler.plugin = self
         bridge?.notificationRouter.localNotificationHandler = handler
-        restoreActionTypes()
+        center.setNotificationCategories([])
+        UserDefaults.standard.removeObject(forKey: "capnative.local-notifications.actions")
     }
 
     func presentationOptions() -> UNNotificationPresentationOptions {
@@ -77,12 +76,7 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
             call.reject("The notification could not be scheduled.", "INVALID_NOTIFICATION")
             return
         }
-        let registered = savedActionIds()
         for notification in notifications {
-            if let actionTypeId = notification.actionTypeId, !registered.contains(actionTypeId) {
-                call.reject("Action type \"\(actionTypeId)\" is not registered. Call registerActionTypes() first.", "INVALID_ACTION")
-                return
-            }
             if let sound = notification.sound, !sound.isEmpty, sound != "default", bundleSound(sound) == nil {
                 call.reject("Sound \(sound) was not found in the app bundle.", "INVALID_NOTIFICATION")
                 return
@@ -145,24 +139,6 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             self?.center.removeDeliveredNotifications(withIdentifiers: ids)
             call.resolve()
-        }
-    }
-
-    @objc func registerActionTypes(_ call: CAPPluginCall) {
-        guard let types = call.getArray("types", JSObject.self) else {
-            call.reject("types must be an array of action types.", "INVALID_ACTION")
-            return
-        }
-        do {
-            let normalized = try types.map { try normalizeActionType($0) }
-            let data = try JSONSerialization.data(withJSONObject: normalized)
-            UserDefaults.standard.set(data, forKey: defaultsKey)
-            applyActionTypes(normalized)
-            call.resolve()
-        } catch let error as NotificationFailure {
-            call.reject(error.message, error.code)
-        } catch {
-            call.reject("Action types could not be saved.", "INVALID_ACTION")
         }
     }
 
@@ -231,16 +207,12 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
                 content.sound = UNNotificationSound(named: UNNotificationSoundName(sound))
             }
         }
-        if let actionTypeId = notification.actionTypeId {
-            content.categoryIdentifier = actionTypeId
-        }
         if !notification.attachments.isEmpty {
             content.attachments = try notification.attachments.map { try makeAttachment($0.id, $0.url) }
         }
         var info: [AnyHashable: Any] = ["capnative": true, "silent": notification.silent]
         if let extra = notification.extraJSON { info["extra"] = extra }
         if let schedule = notification.schedule, let encoded = scheduleJSON(schedule) { info["schedule"] = encoded }
-        if let actionTypeId = notification.actionTypeId { info["actionTypeId"] = actionTypeId }
         content.userInfo = info
         let trigger = try makeTrigger(notification.plan, now: now)
         return UNNotificationRequest(identifier: String(notification.id), content: content, trigger: trigger)
@@ -348,111 +320,6 @@ public class LocalNotificationsPlugin: CAPPlugin, CAPBridgedPlugin {
         guard let data = try? JSONSerialization.data(withJSONObject: object),
               let text = String(data: data, encoding: .utf8) else { return nil }
         return text
-    }
-
-    private func savedActionIds() -> Set<String> {
-        guard let data = UserDefaults.standard.data(forKey: defaultsKey),
-              let types = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
-            return []
-        }
-        return Set(types.compactMap { $0["id"] as? String })
-    }
-
-    private func restoreActionTypes() {
-        guard let data = UserDefaults.standard.data(forKey: defaultsKey),
-              let types = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
-            return
-        }
-        applyActionTypes(types)
-    }
-
-    private func applyActionTypes(_ types: [[String: Any]]) {
-        var categories: [UNNotificationCategory] = []
-        for type in types {
-            guard let id = type["id"] as? String else { continue }
-            let actions = (type["actions"] as? [[String: Any]] ?? []).compactMap { actionObject -> UNNotificationAction? in
-                guard let actionId = actionObject["id"] as? String, let title = actionObject["title"] as? String else { return nil }
-                var options: UNNotificationActionOptions = []
-                if (actionObject["foreground"] as? Bool) == true { options.insert(.foreground) }
-                if (actionObject["destructive"] as? Bool) == true { options.insert(.destructive) }
-                if (actionObject["requiresAuthentication"] as? Bool) == true { options.insert(.authenticationRequired) }
-                if (actionObject["input"] as? Bool) == true {
-                    let placeholder = (actionObject["inputPlaceholder"] as? String) ?? ""
-                    if let button = actionObject["inputButtonTitle"] as? String, !button.isEmpty {
-                        return UNTextInputNotificationAction(
-                            identifier: actionId,
-                            title: title,
-                            options: options,
-                            textInputButtonTitle: button,
-                            textInputPlaceholder: placeholder
-                        )
-                    }
-                    return UNTextInputNotificationAction(identifier: actionId, title: title, options: options)
-                }
-                return UNNotificationAction(identifier: actionId, title: title, options: options)
-            }
-            var categoryOptions: UNNotificationCategoryOptions = [.customDismissAction]
-            if (type["iosCustomDismissAction"] as? Bool) == true { categoryOptions.insert(.customDismissAction) }
-            if (type["iosAllowInCarPlay"] as? Bool) == true { categoryOptions.insert(.allowInCarPlay) }
-            if (type["iosHiddenPreviewsShowTitle"] as? Bool) == true { categoryOptions.insert(.hiddenPreviewsShowTitle) }
-            if (type["iosHiddenPreviewsShowSubtitle"] as? Bool) == true { categoryOptions.insert(.hiddenPreviewsShowSubtitle) }
-            let placeholder = (type["iosHiddenPreviewsBodyPlaceholder"] as? String) ?? ""
-            categories.append(UNNotificationCategory(
-                identifier: id,
-                actions: actions,
-                intentIdentifiers: [],
-                hiddenPreviewsBodyPlaceholder: placeholder,
-                options: categoryOptions
-            ))
-        }
-        center.setNotificationCategories(Set(categories))
-    }
-
-    private func normalizeActionType(_ value: JSObject) throws -> [String: Any] {
-        guard let id = value["id"] as? String, id.range(of: #"^[A-Za-z0-9_-]{1,64}$"#, options: .regularExpression) != nil else {
-            throw NotificationFailure(code: "INVALID_ACTION", message: "id has an invalid format.")
-        }
-        if id == "tap" || id == "dismiss" {
-            throw NotificationFailure(code: "INVALID_ACTION", message: "Action type id cannot be tap or dismiss.")
-        }
-        let rawActions = value["actions"] as? [JSObject] ?? []
-        if rawActions.count > 3 {
-            throw NotificationFailure(code: "INVALID_ACTION", message: "An action type can have at most 3 actions.")
-        }
-        var seen = Set<String>()
-        let actions: [[String: Any]] = try rawActions.map { action in
-            guard let actionId = action["id"] as? String,
-                  actionId.range(of: #"^[A-Za-z0-9_-]{1,64}$"#, options: .regularExpression) != nil,
-                  let title = action["title"] as? String else {
-                throw NotificationFailure(code: "INVALID_ACTION", message: "Each action needs an id and a title.")
-            }
-            if actionId == "tap" || actionId == "dismiss" || !seen.insert(actionId).inserted {
-                throw NotificationFailure(code: "INVALID_ACTION", message: "Action id \(actionId) is reserved or duplicated.")
-            }
-            let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty || trimmed.count > 40 {
-                throw NotificationFailure(code: "INVALID_ACTION", message: "title must be 1 to 40 characters.")
-            }
-            return [
-                "id": actionId,
-                "title": trimmed,
-                "foreground": (action["foreground"] as? Bool) ?? false,
-                "destructive": (action["destructive"] as? Bool) ?? false,
-                "requiresAuthentication": (action["requiresAuthentication"] as? Bool) ?? false,
-                "input": (action["input"] as? Bool) ?? false,
-                "inputButtonTitle": action["inputButtonTitle"] as? String ?? "",
-                "inputPlaceholder": action["inputPlaceholder"] as? String ?? "",
-            ]
-        }
-        return [
-            "id": id,
-            "actions": actions,
-            "iosHiddenPreviewsBodyPlaceholder": value["iosHiddenPreviewsBodyPlaceholder"] as? String ?? "",
-            "iosCustomDismissAction": (value["iosCustomDismissAction"] as? Bool) ?? false,
-            "iosAllowInCarPlay": (value["iosAllowInCarPlay"] as? Bool) ?? false,
-            "iosHiddenPreviewsShowTitle": (value["iosHiddenPreviewsShowTitle"] as? Bool) ?? false,
-            "iosHiddenPreviewsShowSubtitle": (value["iosHiddenPreviewsShowSubtitle"] as? Bool) ?? false,
-        ]
     }
 
     private func bridgeObject(_ object: JSObject) -> [String: Any] {

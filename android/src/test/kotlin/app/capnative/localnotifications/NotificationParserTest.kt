@@ -65,15 +65,6 @@ class NotificationParserTest {
         )
     }
 
-    @Test
-    fun parsesActions() {
-        val types = NotificationParser.parseActionTypes(
-            mapOf("types" to listOf(mapOf("id" to "mail", "actions" to listOf(mapOf("id" to "reply", "title" to "Reply", "input" to true))))),
-        )
-        assertEquals("reply", types[0].actions[0].id)
-        assertTrue(types[0].actions[0].input)
-    }
-
     private fun notification(value: Map<String, Any?>): ValidatedNotification {
         return NotificationParser.parseNotifications(listOf(value), now, utc).first()
     }

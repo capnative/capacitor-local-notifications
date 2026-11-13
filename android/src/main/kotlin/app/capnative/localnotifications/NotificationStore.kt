@@ -19,19 +19,6 @@ internal class NotificationStore(context: Context) {
         writeNotifications(readNotifications().filterNot { it.id == id })
     }
 
-    fun actionTypes(): List<ActionTypeSpec> = synchronized(LOCK) {
-        val raw = preferences.getString(ACTIONS, null) ?: return emptyList()
-        return try {
-            NotificationCodec.actionsFromJson(JSONArray(raw))
-        } catch (_: Exception) {
-            emptyList()
-        }
-    }
-
-    fun saveActionTypes(types: List<ActionTypeSpec>) = synchronized(LOCK) {
-        preferences.edit().putString(ACTIONS, NotificationCodec.actionsToJson(types).toString()).commit()
-    }
-
     private fun readNotifications(): List<StoredNotification> {
         val raw = preferences.getString(NOTIFICATIONS, null) ?: return emptyList()
         return try {
@@ -61,7 +48,6 @@ internal class NotificationStore(context: Context) {
     companion object {
         private const val PREFS = "app.capnative.localnotifications"
         private const val NOTIFICATIONS = "notifications"
-        private const val ACTIONS = "actions"
         private val LOCK = Any()
     }
 }

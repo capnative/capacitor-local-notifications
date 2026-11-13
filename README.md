@@ -70,7 +70,6 @@ await LocalNotifications.addListener('localNotificationActionPerformed', (action
 * [`cancel(...)`](#cancel)
 * [`removeDeliveredNotifications(...)`](#removedeliverednotifications)
 * [`removeAllDeliveredNotifications()`](#removealldeliverednotifications)
-* [`registerActionTypes(...)`](#registeractiontypes)
 * [`addListener('localNotificationReceived', ...)`](#addlistenerlocalnotificationreceived-)
 * [`addListener('localNotificationActionPerformed', ...)`](#addlistenerlocalnotificationactionperformed-)
 * [`removeAllListeners()`](#removealllisteners)
@@ -188,23 +187,6 @@ Notifications posted by other libraries are left in place.
 --------------------
 
 
-### registerActionTypes(...)
-
-```typescript
-registerActionTypes(options: RegisterActionTypesOptions) => Promise<void>
-```
-
-Register notification action buttons. Call this before scheduling a
-notification that sets `actionTypeId`. Replaces any types registered earlier.
-iOS and Android show the buttons.
-
-| Param         | Type                                                                              |
-| ------------- | --------------------------------------------------------------------------------- |
-| **`options`** | <code><a href="#registeractiontypesoptions">RegisterActionTypesOptions</a></code> |
-
---------------------
-
-
 ### addListener('localNotificationReceived', ...)
 
 ```typescript
@@ -232,7 +214,7 @@ process is dead at delivery time.
 addListener(eventName: 'localNotificationActionPerformed', listenerFunc: (action: ActionPerformed) => void) => Promise<PluginListenerHandle>
 ```
 
-Fired when the user taps a notification or one of its actions.
+Fired when the user taps a notification or clears it.
 `actionId` is `tap` for the notification body and `dismiss` when the
 notification is cleared. Dismiss is delivered on Android only while the
 process is alive.
@@ -300,7 +282,6 @@ Platform-specific fields are ignored where the platform cannot apply them.
 | **`largeIcon`**         | <code>string</code>                                              | Android large icon. Bitmap drawable resource name (`png` or `webp`, not a vector).                                                                                                                                                                              |
 | **`iconColor`**         | <code>string</code>                                              | Android icon tint. `#RGB`, `#RRGGBB`, or `#AARRGGBB`.                                                                                                                                                                                                           |
 | **`attachments`**       | <code>Attachment[]</code>                                        | iOS attachments. See <a href="#attachment">`Attachment`</a>.                                                                                                                                                                                                    |
-| **`actionTypeId`**      | <code>string</code>                                              | Must match a type passed to `registerActionTypes` in this app run (and persisted by the plugin).                                                                                                                                                                |
 | **`extra`**             | <code><a href="#record">Record</a>&lt;string, unknown&gt;</code> | JSON object stored with the notification and returned to JavaScript. Do not put secrets here. It is readable from the delivered notification payload by the app and, on Android, by notification listeners on the device. At most 4096 characters once encoded. |
 | **`threadIdentifier`**  | <code>string</code>                                              | iOS `threadIdentifier`.                                                                                                                                                                                                                                         |
 | **`summaryArgument`**   | <code>string</code>                                              | iOS summary argument. Ignored on iOS 15 and newer.                                                                                                                                                                                                              |
@@ -411,43 +392,8 @@ Platform-specific fields are ignored where the platform cannot apply them.
 | **`group`**        | <code>string</code>                                              |                                                                           |
 | **`groupSummary`** | <code>boolean</code>                                             |                                                                           |
 | **`extra`**        | <code><a href="#record">Record</a>&lt;string, unknown&gt;</code> |                                                                           |
-| **`actionTypeId`** | <code>string</code>                                              |                                                                           |
 | **`schedule`**     | <code><a href="#schedule">Schedule</a></code>                    |                                                                           |
 | **`attachments`**  | <code>Attachment[]</code>                                        |                                                                           |
-
-
-#### RegisterActionTypesOptions
-
-| Prop        | Type                      |
-| ----------- | ------------------------- |
-| **`types`** | <code>ActionType[]</code> |
-
-
-#### ActionType
-
-| Prop                                   | Type                  | Description                                                                                  |
-| -------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------- |
-| **`id`**                               | <code>string</code>   | Referenced by <a href="#localnotificationschema">`LocalNotificationSchema.actionTypeId`</a>. |
-| **`actions`**                          | <code>Action[]</code> | At most three actions. Android cannot show more than three buttons.                          |
-| **`iosHiddenPreviewsBodyPlaceholder`** | <code>string</code>   | iOS `hiddenPreviewsBodyPlaceholder`.                                                         |
-| **`iosCustomDismissAction`**           | <code>boolean</code>  | iOS category option. Combined with the other iOS flags.                                      |
-| **`iosAllowInCarPlay`**                | <code>boolean</code>  | iOS category option.                                                                         |
-| **`iosHiddenPreviewsShowTitle`**       | <code>boolean</code>  | iOS category option.                                                                         |
-| **`iosHiddenPreviewsShowSubtitle`**    | <code>boolean</code>  | iOS category option.                                                                         |
-
-
-#### Action
-
-| Prop                         | Type                 | Description                                                                                                                                                                                                                                                        |
-| ---------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **`id`**                     | <code>string</code>  | Reported as `actionId`. `tap` and `dismiss` are reserved.                                                                                                                                                                                                          |
-| **`title`**                  | <code>string</code>  |                                                                                                                                                                                                                                                                    |
-| **`requiresAuthentication`** | <code>boolean</code> | iOS only. Requires the device to be unlocked.                                                                                                                                                                                                                      |
-| **`foreground`**             | <code>boolean</code> | iOS brings the app forward when true and can deliver a background action when false. Android action buttons always open the app. A broadcast trampoline cannot reliably start the activity on Android 12 or newer, so the button's pending intent is the activity. |
-| **`destructive`**            | <code>boolean</code> | iOS destructive style. Android has no equivalent and ignores this flag.                                                                                                                                                                                            |
-| **`input`**                  | <code>boolean</code> | Text input. iOS uses a text action; Android uses `RemoteInput`.                                                                                                                                                                                                    |
-| **`inputButtonTitle`**       | <code>string</code>  | iOS text-input button title.                                                                                                                                                                                                                                       |
-| **`inputPlaceholder`**       | <code>string</code>  | iOS text-input placeholder.                                                                                                                                                                                                                                        |
 
 
 #### PluginListenerHandle
@@ -461,9 +407,8 @@ Platform-specific fields are ignored where the platform cannot apply them.
 
 | Prop               | Type                                                                        | Description                                                            |
 | ------------------ | --------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| **`actionId`**     | <code>string</code>                                                         |                                                                        |
-| **`inputValue`**   | <code>string</code>                                                         | Present when the action has `input: true` and the user submitted text. |
-| **`notification`** | <code><a href="#localnotificationschema">LocalNotificationSchema</a></code> |                                                                        |
+| **`actionId`**     | <code>string</code>                                                         | `tap` when the notification body is opened, `dismiss` when it is cleared. |
+| **`notification`** | <code><a href="#localnotificationschema">LocalNotificationSchema</a></code> |                                                                            |
 
 
 ### Type Aliases
@@ -564,10 +509,6 @@ Android shows a notification whether or not the app is open. iOS uses `presentat
 
 Android stores the pending payload in private app preferences and reschedules on `BOOT_COMPLETED`. Alarms are not direct-boot aware: they are restored after the user unlocks the device. iOS persists `UNNotificationRequest`s itself.
 
-### Actions
-
-iOS can combine `foreground`, `destructive`, and `requiresAuthentication`. Android has no destructive style and does not require authentication before a button. Text input uses `UNTextInputNotificationAction` on iOS and `RemoteInput` on Android.
-
 ### Delivered notifications
 
 `removeAllDeliveredNotifications()` removes notifications this plugin posted. It does not clear notifications posted by another plugin. iOS notification ids still share one center, so two plugins should not reuse the same id.
@@ -583,8 +524,7 @@ The method names and most fields match that plugin so existing calls are recogni
 - `at` in the past is rejected. Show it immediately by omitting `schedule`.
 - `getDeliveredNotifications()` is not included. `removeDeliveredNotifications()` and `removeAllDeliveredNotifications()` still remove notifications this plugin posted.
 - `removeAllDeliveredNotifications()` is limited to notifications this plugin posted.
-- iOS action options can be combined. The other plugin keeps only the first flag it sees.
-- Android action buttons open the app, including when `foreground` is false.
+- `registerActionTypes()`, `actionTypeId`, and notification action buttons are not included. `localNotificationActionPerformed` still reports `tap` and `dismiss`.
 - `createChannel()`, `deleteChannel()`, `listChannels()`, and `channelId` are not included.
 - Per-notification `sound` is ignored on Android 8+. Set `sound` in the plugin config, or the system default is used.
 - `areEnabled()` is not included. Use `checkPermissions()` and treat `display === 'granted'` as enabled.

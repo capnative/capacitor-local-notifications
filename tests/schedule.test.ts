@@ -5,7 +5,6 @@ import {
   addEvery,
   nextCalendarOccurrence,
   nextPlanAfter,
-  parseActionTypes,
   parseNotifications,
   toIso,
 } from '../src/schedule';
@@ -197,32 +196,5 @@ describe('nextCalendarOccurrence', () => {
     const first = nextCalendarOccurrence({ hour: 9 }, NOW);
     const plan = nextPlanAfter({ kind: 'calendar', on: { hour: 9 }, nextMs: first }, first);
     expect(plan && 'nextMs' in plan ? toIso(plan.nextMs) : '').toBe('2026-11-07T09:00:00.000Z');
-  });
-});
-
-describe('actions', () => {
-  it('caps action buttons and reserves tap and dismiss', () => {
-    const types = parseActionTypes({
-      types: [{ id: 'mail', actions: [{ id: 'reply', title: 'Reply', input: true }] }],
-    });
-    expect(types[0]?.actions?.[0]).toMatchObject({ id: 'reply', input: true, foreground: false });
-    expect(codeOf(() => parseActionTypes({ types: [{ id: 'tap' }] }))).toBe('INVALID_ACTION');
-    expect(
-      codeOf(() =>
-        parseActionTypes({
-          types: [
-            {
-              id: 'too-many',
-              actions: [
-                { id: 'a', title: 'A' },
-                { id: 'b', title: 'B' },
-                { id: 'c', title: 'C' },
-                { id: 'd', title: 'D' },
-              ],
-            },
-          ],
-        }),
-      ),
-    ).toBe('INVALID_ACTION');
   });
 });
