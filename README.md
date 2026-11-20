@@ -75,8 +75,6 @@ await LocalNotifications.addListener('localNotificationActionPerformed', (action
 * [`addListener('localNotificationActionPerformed', ...)`](#addlistenerlocalnotificationactionperformed-)
 * [`removeAllListeners()`](#removealllisteners)
 * [Interfaces](#interfaces)
-* [Type Aliases](#type-aliases)
-* [Enums](#enums)
 
 </docgen-index>
 
